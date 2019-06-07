@@ -3,7 +3,11 @@ public class TCB {
     private int tid = 0;
     private int pid = 0;
     private boolean terminated = false;
-    private int sleepTime = 0;
+	private int sleepTime = 0;
+	
+
+	// user file descripter table:
+	// each entry pointing to a file (structure) table entry
     public FileTableEntry[] ftEnt = null; // added for the file system
 
     public TCB( Thread newThread, int myTid, int parentTid ) {
@@ -13,6 +17,8 @@ public class TCB {
 	terminated = false;
 
 	ftEnt = new FileTableEntry[32];    // added for the file system
+	for (int i = 0; i < 32; i++)	// added for the file system
+		ftEnt[i] = null;
 
 	System.err.println( "threadOS: a new thread (thread=" + thread + 
 			    " tid=" + tid + 
