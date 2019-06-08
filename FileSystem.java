@@ -68,6 +68,7 @@ public class FileSystem
         
         if (anEntry == null && mode.equals(READ))
         {
+            System.out.println("SHOULD NOT HAPPEN");
             return anEntry;
         }
             
@@ -81,6 +82,7 @@ public class FileSystem
 
             else if (mode.equals(READ) || mode.equals(READWRITE))
             {
+                System.out.println("SHOULD HAPPEN");
                 seek(anEntry, 0, SEEK_SET);
             }
 
@@ -125,6 +127,12 @@ public class FileSystem
 
         seek(ftEnt, 0, SEEK_SET);
         
+        System.out.println("count : " + ftEnt.count);
+        System.out.println("fte inumber : " + ftEnt.iNumber);
+        System.out.println("fte seek : " + ftEnt.seekPtr);
+        System.out.println("fte indirect : " + ftEnt.inode.indirect);
+        System.out.println("fte inode length : " + ftEnt.inode.length);
+
         synchronized(ftEnt)
         {
             byte[] bytes = new byte[Disk.blockSize];
@@ -133,7 +141,6 @@ public class FileSystem
             int bytesRead = 0;
             
             int fileLeft = ftEnt.inode.length - ftEnt.seekPtr;
-            
             if (fileLeft > buffer.length)
             {
                 fileLeft = buffer.length;
@@ -141,7 +148,8 @@ public class FileSystem
 
             int fullBlocks = fileLeft / Disk.blockSize;
             int partialBlock = fileLeft % Disk.blockSize;
-            short block = -1;
+            //System.out.println("fullblocks = " + fullBlocks + " partialblocks = " + partialBlock);
+            short block = ftEnt.inode.findTargetBlock(ftEnt.seekPtr);
 
             for (int i = fullBlocks; i > 0; i--)
             {
@@ -190,7 +198,7 @@ public class FileSystem
             int partialBlock = buffer.length % Disk.blockSize;
 
             synchronized(ftEnt)
-            {
+            {   
                 short block = ftEnt.inode.findTargetBlock(ftEnt.seekPtr);
                 for (int i = fullBlocks; i > 0; i--)
                 {
@@ -200,8 +208,14 @@ public class FileSystem
                         System.arraycopy(buffer, ftEnt.seekPtr, bytes, 0, Disk.blockSize);
                         SysLib.rawwrite(block, bytes);
 
+                        System.out.println("CHECKBE " + ftEnt.inode.length);
+                        ftEnt.inode.length += Disk.blockSize;
+                        System.out.println("CHECKAF " + ftEnt.inode.length);
+
                         ftEnt.seekPtr += Disk.blockSize;
                         bytesWritten += Disk.blockSize;
+                
+                        ftEnt.inode.registerBlock(ftEnt.seekPtr, (short)superblock.getFreeBlock());
                     }
                     else
                     {
@@ -212,10 +226,18 @@ public class FileSystem
                 {
                     System.arraycopy(buffer, ftEnt.seekPtr, bytes, 0, partialBlock);
                     SysLib.rawwrite(block, bytes);
+
+                    System.out.println("CHECKBE2 " + ftEnt.inode.length);
+                    ftEnt.inode.length += partialBlock;
+                    System.out.println("CHECKAF2 " + ftEnt.inode.length);
+
                     bytesWritten += partialBlock;
+
+                    ftEnt.inode.registerBlock(ftEnt.seekPtr, (short)superblock.getFreeBlock());
                 }
             }
-
+            
+            
             return bytesWritten;
         }
         else  // if mode is APPEND
@@ -258,6 +280,7 @@ public class FileSystem
                     System.arraycopy(buffer, 0, bytes, startBlockOffset, remainingStartBlock);
                     SysLib.rawwrite(block, bytes);
 
+                    ftEnt.inode.length += remainingStartBlock;
                     ftEnt.seekPtr += remainingStartBlock;
                     bytesWritten += remainingStartBlock;
                 }
@@ -269,8 +292,11 @@ public class FileSystem
                         System.arraycopy(buffer, ftEnt.seekPtr, bytes, 0, Disk.blockSize);
                         SysLib.rawwrite(block, bytes);
 
+                        ftEnt.inode.length += Disk.blockSize;
                         ftEnt.seekPtr += Disk.blockSize;
                         bytesWritten += Disk.blockSize;
+
+                        ftEnt.inode.registerBlock(ftEnt.seekPtr, (short)superblock.getFreeBlock());
                     }
                     else
                     {
@@ -281,7 +307,11 @@ public class FileSystem
                 {
                     System.arraycopy(buffer, ftEnt.seekPtr, bytes, 0, partialEndBlock);
                     SysLib.rawwrite(block, bytes);
+
+                    ftEnt.inode.length += partialEndBlock;
                     bytesWritten += partialEndBlock;
+
+                    ftEnt.inode.registerBlock(ftEnt.seekPtr, (short)superblock.getFreeBlock());
                 }
             }
         }

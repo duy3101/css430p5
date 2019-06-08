@@ -33,6 +33,7 @@ public class FileTable
             else
             {
                 iNumber = dir.namei(filename);
+                
             }
             
 

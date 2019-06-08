@@ -66,7 +66,7 @@ public class Inode
      * Gets the index block number of this Inode.
      * @return - The index block number of this Inode.
      */
-    short getIndexBlockNumber()
+    short getIndirectBlockNumber()
     {
         return this.indirect;
     }
@@ -75,13 +75,13 @@ public class Inode
     /**
      * Sets this Inode's index block number to the given value, and writes it
      * the the disk in that position.
-     * @param indexBlockNumber - The value to set this Inode's index block
+     * @param indirectBlockNumber - The value to set this Inode's index block
      *                           number to.
-     * @return True if the indexBlockNumber was set successfully. Returns false
+     * @return True if the indirectBlockNumber was set successfully. Returns false
      * if any of the block's inodes are unregistered or if the block itself is
      * unregistered.
      */
-    boolean setIndexBlock(short indexBlockNumber)
+    boolean setIndirectBlock(short indirectBlockNumber)
     {
         for (int i = 0; i < DIRECT_SIZE; i++)
         {
@@ -94,7 +94,7 @@ public class Inode
         {
             return false;
         }
-        this.indirect = indexBlockNumber;
+        this.indirect = indirectBlockNumber;
 
         byte[] block = new byte[Disk.blockSize];
         for (int i = 0; i < Disk.blockSize / 2; i++)
@@ -131,15 +131,15 @@ public class Inode
 
     /**
      * Sets the data in the block at the given blockNumber to the inode found at
-     * the given iNumber.
-     * @param iNumber - The Inode number to set the block data to.
+     * the given offset.
+     * @param offset - The Inode number to set the block data to.
      * @param blockNumber - The block to set the Inode of.
      * @return {@value #SUCCESS} if the block is registered successfully,
      *         returns {@value #ERROR} otherwise.
      */
-    int registerBlock(int iNumber, short blockNumber)
+    int registerBlock(int offset, short blockNumber)
     {
-        int blockPosition = iNumber / Disk.blockSize;
+        int blockPosition = offset / Disk.blockSize;
         if (blockPosition < DIRECT_SIZE)
         {
             if (this.direct[blockPosition] != NULL_POINTER)
@@ -158,14 +158,15 @@ public class Inode
         {
             if (this.indirect == UNREGISTERED)
             {
-                return ERROR;
+                this.indirect = blockNumber;
             }
 
             byte[] block = new byte[Disk.blockSize];
             SysLib.rawread((int)this.indirect, block);
 
+            // block's location in the indirect block
             int blockLocation = (blockPosition - DIRECT_SIZE) * 2;
-            if (SysLib.bytes2short(block, blockLocation) > 0)
+            if (SysLib.bytes2short(block, blockLocation) < 0)  // > 0?
             {
                 return ERROR;
             }
