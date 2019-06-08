@@ -9,6 +9,7 @@ public class FileSystem
     public static final String WRITE = "w";
     public static final String READWRITE = "w+";
     public static final String APPEND = "a";
+    public static final String ROOTNAME = "/";
 
     private Superblock superblock;
     private Directory directory;
@@ -26,7 +27,7 @@ public class FileSystem
         filetable = new FileTable(directory);
 
         // directory reconstruction
-        FileTableEntry dirEnt = open("/", "r");
+        FileTableEntry dirEnt = open("/", READ);
         if (dirSize > 0)
         {
             byte[] dirData = new byte[dirSize];
@@ -39,7 +40,11 @@ public class FileSystem
 
     public void sync()
     {
-
+        FileTableEntry dirEnt = open("/", WRITE);
+        byte[] dirData = directory.directory2bytes();
+        write(dirEnt, dirData);
+        superblock.sync();
+        close(ftEnt);
     }
 
     public boolean format(int files)
@@ -55,8 +60,6 @@ public class FileSystem
         }
         else
         {
-
-            
             FileTableEntry anEntry = filetable.falloc(filename, mode);
             // anEntry will be null if filename is not in there
             
@@ -65,17 +68,29 @@ public class FileSystem
             
             synchronized(anEntry)
             {
-                if (anEntry == null)
+
+                if (mode.equals(APPEND))
                 {
-                    directory.ialloc(filename);
-                    
+                    seek(anEntry, 0, SEEK_END);
                 }
 
+                else if (mode.equals(READ) || mode.equals(READWRITE))
+                {
+                    seek(anEntry, 0, SEEK_SET);
+                }
+
+                else
+                {
+                    seek(anEntry, 0, SEEK_SET);
+                    deallocAllBlocks(anEntry);
+                }
+            
+                return anEntry;
+
             }
-
-
         }
     }
+    
 
     public boolean close(FileTableEntry ftEnt)
     {
@@ -89,17 +104,95 @@ public class FileSystem
 
     public int read(FileTableEntry ftEnt, byte[] buffer)
     {
-        return -1;
+        if (ftEnt.inode.flag != Inode.FLAG_READ)
+            return -1;
+
+        
+        int iterator = 0;
+
+        synchronized(ftEnt)
+        {
+            byte[] bytes = new byte[Disk.blockSize];
+            
+
+            int bufferlength = buffer.length;
+            int bytesRead = 0;
+            
+            int fileLeft = ftEnt.inode.length - ftEnt.seekPtr;
+            
+            if (fileLeft > buffer.length)
+            {
+                fileLeft = buffer.length;
+            }
+
+            int fullBlocks = fileLeft / Disk.blockSize;
+            int partialBlock = fileLeft % Disk.blockSize;
+            short block = -1;
+
+            for (int i = fullBlocks; i > 0; i--)
+            {
+                block = ftEnt.inode.findTargetBlock(ftEnt.seekPtr);
+                if (block == (short)-1)
+                {
+                    // cannot find block
+                    break;
+                }
+
+                SysLib.rawread(block, bytes);
+                System.arraycopy(bytes, 0, buffer, ftEnt.seekPtr, Disk.blockSize);
+
+
+                ftEnt.seekPtr += Disk.blockSize;
+                bytesRead += Disk.blockSize;
+            }
+            if (block != (short)-1)
+            {
+                SysLib.rawread(block, bytes);
+                System.arraycopy(bytes, 0, buffer, ftEnt.seekPtr, partialBlock);
+                bytesRead += partialBlock;
+            }
+            seek(ftEnt, 0, SEEK_SET);
+            return bytesRead;
+            
+        }
+     
     }
 
     public int write(FileTableEntry ftEnt, byte[] buffer)
     {
-        return -1;
+        if (ftEnt.inode.flag != Inode.FLAG_WRITE)
+            return -1;
+
+        synchronized(ftEnt)
+        {
+            int bytesWritten = 0;
+            block = ftEnt.inode.findTargetBlock(ftEnt.seekPtr);
+
+        }
     }
 
     private boolean deallocAllBlocks(FileTableEntry ftEnt)
     {
-        return false;
+        if (ftEnt == null)
+            return false;
+
+        if (ftEnt.inode.count > 1)
+            return false;
+
+        for (int i = 0; i < Inode.DIRECT_SIZE; i++)
+        {
+            if (ftEnt.inode.direct[i] != -1)
+            {
+                superblock.returnBlock(i);
+                ftEnt.inode.direct[i] = -1;
+            }
+        }
+
+        ftEnt.inode.freeBlock();
+        ftEnt.inode.count = 0;
+        ftEnt.inode.toDisk(ftEnt.iNumber);
+        return true;
+        
     }
 
     public boolean delete(String filename)

@@ -22,7 +22,7 @@ public class Inode
     public int length;  // file size in bytes
     public short count; // # file-table entires pointing to this
     public short flag;  // 0 = unused, 1 = used
-    public short direct[] = new short[directSize];  // direct pointers
+    public short direct[] = new short[DIRECT_SIZE];  // direct pointers
     public short indirect;
 
 
@@ -56,7 +56,7 @@ public class Inode
      * Writes the inode to the disk at the position indicated by the iNumber.
      * @param iNumber - The position on the disk to write the Inode to.
      */
-    int toDisk(short iNumber)
+    void toDisk(short iNumber)
     {
         this.toFromDisk(iNumber, WRITE); 
     }
@@ -237,6 +237,7 @@ public class Inode
                 INODE_SIZE);
             SysLib.rawwrite(offset, newBlock);
         }
+        
     }
 
 
