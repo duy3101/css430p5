@@ -151,7 +151,7 @@ public class Inode
                 return ERROR;
             }
 
-            this.direct[blockPosition] = BlockNumber;
+            this.direct[blockPosition] = blockNumber;
             return SUCCESS;
         }
         else
@@ -205,7 +205,7 @@ public class Inode
      *                        {@link #READ} if reading, {@link #WRITE} if
      *                        writing.
      */
-    private void toFromDisk(int iNumber, int diERROR_skInteraction)
+    private void toFromDisk(int iNumber, int diskInteraction)
     {
         byte[] block = new byte[Disk.blockSize];
         if(diskInteraction == Inode.READ)

@@ -81,6 +81,67 @@ public class SysLib {
 				 Kernel.CSYNC, 0, null );
     }
 
+
+    // P5 sys calls
+
+    public static int format(int files)
+    {
+        return Kernel.interrupt( Kernel.INTERRUPT_SOFTWARE,
+                Kernel.FORMAT, files, null);
+    }
+
+    public static int open(String filename, String mode)
+    {
+        String arg[] = new String[2];
+        arg[0] = filename;
+        arg[1] = mode;
+
+        return Kernel.interrupt( Kernel.INTERRUPT_SOFTWARE,
+                Kernel.OPEN, 0, arg);
+    }
+
+    public static int read(int fd, byte buffer[])
+    {
+        return Kernel.interrupt( Kernel.INTERRUPT_SOFTWARE,
+                Kernel.READ, fd, buffer);
+    }
+
+    public static int write(int fd, byte buffer[])
+    {
+        return Kernel.interrupt( Kernel.INTERRUPT_SOFTWARE,
+                Kernel.WRITE, fd, buffer);
+    }
+
+    public static int close(int file)
+    {
+        return Kernel.interrupt( Kernel.INTERRUPT_SOFTWARE,
+                Kernel.CLOSE, file, null);
+    }
+
+    public static int delete(String filename)
+    {
+        return Kernel.interrupt( Kernel.INTERRUPT_SOFTWARE,
+				 Kernel.DELETE, 0, filename);
+    }
+
+    public static int fsize(int file)
+    {
+        return Kernel.interrupt( Kernel.INTERRUPT_SOFTWARE,
+				 Kernel.SIZE, file, null);
+    }
+
+    public static int seek(int file, int offset, int whence)
+    {
+        int arg[] = new int[3];
+        arg[0] = file;
+        arg[1] = offset;
+        arg[2] = whence;
+
+        return Kernel.interrupt( Kernel.INTERRUPT_SOFTWARE,
+                Kernel.SEEK, 0, arg);
+    }
+
+
     public static String[] stringToArgs( String s ) {
 	StringTokenizer token = new StringTokenizer( s," " );
 	String[] progArgs = new String[ token.countTokens( ) ];

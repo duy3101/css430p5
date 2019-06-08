@@ -9,7 +9,7 @@ public class FileSystem
     public static final String WRITE = "w";
     public static final String READWRITE = "w+";
     public static final String APPEND = "a";
-    public static final String ROOTNAME = "/";
+    public static final String ROOT_NAME = "/";
 
     private Superblock superblock;
     private Directory directory;
@@ -27,7 +27,8 @@ public class FileSystem
         filetable = new FileTable(directory);
 
         // directory reconstruction
-        FileTableEntry dirEnt = open("/", READ);
+        FileTableEntry dirEnt = open(ROOT_NAME, READ);
+        int dirSize = fsizes(dirEnt);
         if (dirSize > 0)
         {
             byte[] dirData = new byte[dirSize];
@@ -40,15 +41,22 @@ public class FileSystem
 
     public void sync()
     {
-        FileTableEntry dirEnt = open("/", WRITE);
+        FileTableEntry dirEnt = open(ROOT_NAME, WRITE);
         byte[] dirData = directory.directory2bytes();
-        write(dirEnt, dirData);
-        superblock.sync();
-        close(ftEnt);
+        this.write(dirEnt, dirData);
+        this.close(dirEnt);
+        this.superblock.sync();
     }
 
     public boolean format(int files)
     {
+        if(this.filetable.fempty())
+        {
+            this.superblock.format(files);
+            this.directory = new Directory(this.superblock.totalInodes);
+            this.filetable = new FileTable(this.directory);
+            return true;
+        }
         return false;
     }
 
@@ -94,12 +102,23 @@ public class FileSystem
 
     public boolean close(FileTableEntry ftEnt)
     {
-        return false;
+        synchronized(ftEnt)
+        {
+            ftEnt.count--;
+            if(ftEnt.count > 0)
+            {
+                return true;
+            }
+        }
+        return this.filetable.ffree(ftEnt);
     }
 
     public int fsizes(FileTableEntry ftEnt)
     {
-        return -1;
+        synchronized(ftEnt)
+        {
+            return ftEnt.inode.length;
+        }
     }
 
     public int read(FileTableEntry ftEnt, byte[] buffer)
@@ -107,15 +126,13 @@ public class FileSystem
         if (ftEnt.inode.flag != Inode.FLAG_READ)
             return -1;
 
+        seek(ftEnt, 0, SEEK_SET);
         
-        int iterator = 0;
-
         synchronized(ftEnt)
         {
             byte[] bytes = new byte[Disk.blockSize];
             
 
-            int bufferlength = buffer.length;
             int bytesRead = 0;
             
             int fileLeft = ftEnt.inode.length - ftEnt.seekPtr;
@@ -162,13 +179,118 @@ public class FileSystem
     {
         if (ftEnt.inode.flag != Inode.FLAG_WRITE)
             return -1;
+        
+        int bytesWritten = 0;
 
-        synchronized(ftEnt)
+        if (ftEnt.mode != APPEND)  // if mode is WRITE or READWRITE
         {
-            int bytesWritten = 0;
-            block = ftEnt.inode.findTargetBlock(ftEnt.seekPtr);
+            seek(ftEnt, 0, SEEK_SET);  // start at the beginning of the file
+            deallocAllBlocks(ftEnt);   // overwrite all data in file
 
+            byte[] bytes = new byte[Disk.blockSize];
+
+            int fullBlocks = buffer.length / Disk.blockSize;
+            int partialBlock = buffer.length % Disk.blockSize;
+
+            synchronized(ftEnt)
+            {
+                short block = ftEnt.inode.findTargetBlock(ftEnt.seekPtr);
+                for (int i = fullBlocks; i > 0; i--)
+                {
+                    block = ftEnt.inode.findTargetBlock(ftEnt.seekPtr);
+                    if (block < Disk.blockSize && block != (short)-1)  // block found and within disk block range
+                    {
+                        System.arraycopy(buffer, ftEnt.seekPtr, bytes, 0, Disk.blockSize);
+                        SysLib.rawwrite(block, bytes);
+
+                        ftEnt.seekPtr += Disk.blockSize;
+                        bytesWritten += Disk.blockSize;
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+                if (block < Disk.blockSize)
+                {
+                    System.arraycopy(buffer, ftEnt.seekPtr, bytes, 0, partialBlock);
+                    SysLib.rawwrite(block, bytes);
+                    bytesWritten += partialBlock;
+                }
+            }
+
+            return bytesWritten;
         }
+        else  // if mode is APPEND
+        {
+            seek(ftEnt, 0, SEEK_END);  // go to the end of the file
+
+            byte[] bytes = new byte[Disk.blockSize];
+            
+            // how much original file spilled into its last block
+            int startBlockOffset = ftEnt.inode.length % Disk.blockSize;
+            
+            // how much space original file's last block still has
+            int remainingStartBlock = Disk.blockSize - startBlockOffset;
+            
+            // if buffer is smaller than what is left in the block where original file ended 
+            // (i.e. < disk.BlockSize), set remaining amount to buffer length
+            if (remainingStartBlock > buffer.length)
+            {
+                remainingStartBlock = buffer.length;
+            }
+            
+            // (original file size + what we are appending) % (Disk.blocksize) gives partial size of last block
+            int partialEndBlock = (buffer.length + ftEnt.inode.length) % Disk.blockSize;
+            
+            // "trims" beginning partial amount and ending partial amount, divides by blockSize to get full blocks
+            int fullBlocks = (buffer.length - (remainingStartBlock + partialEndBlock)) / Disk.blockSize;
+            
+
+            synchronized(ftEnt)
+            {
+                short block = ftEnt.inode.findTargetBlock(ftEnt.seekPtr);
+                if (block < Disk.blockSize && block != (short)-1)  // block found and within disk block range
+                {
+                    // keep the part of block where original file ended
+                    SysLib.rawread(block, bytes);
+                    
+                    // arraycopy from the buffer, beginning at the offset where the original file ended
+                    // the length of what is being copied is however much free space is left in the block
+                    // UNLESS buffer is less than that remaining block space, in which case just copy all of buffer.
+                    System.arraycopy(buffer, 0, bytes, startBlockOffset, remainingStartBlock);
+                    SysLib.rawwrite(block, bytes);
+
+                    ftEnt.seekPtr += remainingStartBlock;
+                    bytesWritten += remainingStartBlock;
+                }
+                for (int i = fullBlocks; i > 0; i--)
+                {
+                    block = ftEnt.inode.findTargetBlock(ftEnt.seekPtr);
+                    if (block < Disk.blockSize && block != (short)-1)
+                    {
+                        System.arraycopy(buffer, ftEnt.seekPtr, bytes, 0, Disk.blockSize);
+                        SysLib.rawwrite(block, bytes);
+
+                        ftEnt.seekPtr += Disk.blockSize;
+                        bytesWritten += Disk.blockSize;
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+                if (block < Disk.blockSize && block != (short)-1)
+                {
+                    System.arraycopy(buffer, ftEnt.seekPtr, bytes, 0, partialEndBlock);
+                    SysLib.rawwrite(block, bytes);
+                    bytesWritten += partialEndBlock;
+                }
+            }
+        }
+
+        seek(ftEnt, 0, SEEK_SET);
+        return bytesWritten;
     }
 
     private boolean deallocAllBlocks(FileTableEntry ftEnt)
@@ -197,8 +319,12 @@ public class FileSystem
 
     public boolean delete(String filename)
     {
-        return false;
+        FileTableEntry ftEnt = this.open(filename, WRITE);
+        return this.close(ftEnt) && this.directory.ifree(ftEnt.iNumber);
     }
+
+
+
 
 
     public final int SEEK_SET = 0;
@@ -207,7 +333,57 @@ public class FileSystem
 
     public int seek(FileTableEntry ftEnt, int offset, int whence)
     {
-        return -1;
+        synchronized(ftEnt)
+        {
+            int filelength = ftEnt.inode.length;
+            
+            switch(whence)
+            {
+
+                case SEEK_SET:
+                    // the file's seek pointer is set to offset bytes from the beginning of the file
+                    ftEnt.seekPtr = offset;
+                    break;
+
+                case SEEK_CUR:
+                    // the file's seek pointer is set to its current value plus the offset. 
+                    ftEnt.seekPtr += offset;
+
+                    // bound check
+                    if (ftEnt.seekPtr < 0)
+                    {
+                        ftEnt.seekPtr = 0;
+                    }
+                    else if (ftEnt.seekPtr > filelength)
+                    {
+                        ftEnt.seekPtr = filelength;
+                    }
+                    break;
+                case SEEK_END:
+                    // the file's seek pointer is set to the size of the file plus the offset. 
+                    ftEnt.seekPtr = ftEnt.inode.length + offset;
+
+                    // bound check
+                    if (ftEnt.seekPtr < 0)
+                    {
+                        ftEnt.seekPtr = 0;
+                    }
+                    else if (ftEnt.seekPtr > filelength)
+                    {
+                        ftEnt.seekPtr = filelength;
+                    }
+                    break;
+
+
+                default:
+                    // shouldn't go in here
+                    return -1;
+
+                
+            }
+            return ftEnt.seekPtr;
+
+        }
     }
 
 

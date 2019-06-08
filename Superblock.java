@@ -30,20 +30,18 @@ public class Superblock
 
         SysLib.rawread(0, bytes);
 
-        totalBlocks = SysLib.bytes2int(bytes, BLOCK_COUNT_POSITION);    
-        totalInodes = SysLib.bytes2int(bytes, INODE_COUNT_POSITION);    
-        freeList = SysLib.bytes2int(bytes, FREE_LIST_POSITION);
+        this.totalBlocks = SysLib.bytes2int(bytes, BLOCK_COUNT_POSITION);    
+        this.totalInodes = SysLib.bytes2int(bytes, INODE_COUNT_POSITION);    
+        this.freeList = SysLib.bytes2int(bytes, FREE_LIST_POSITION);
 
-        if (bytes == diskSize && totalInodes > 0 && freeList >=2)
+        if (totalBlocks == diskSize && totalInodes > 0 && freeList >=2)
         {
-            // disk contents are valid
             return; 
         }
         else
         {
-            // need to format disk
             totalBlocks = diskSize;
-            SysLiB.format(DEFAULT_INODE_BLOCK_COUNT);
+            format(DEFAULT_INODE_BLOCK_COUNT);
         } 
     }
 
@@ -53,7 +51,6 @@ public class Superblock
      */
     public void sync()
     {
-        // write back totalBlocks, inodeBlocks, and freeList
         byte[] block = new byte[Disk.blockSize];
         SysLib.int2bytes(this.totalBlocks, block, BLOCK_COUNT_POSITION);
         SysLib.int2bytes(this.totalInodes, block, INODE_COUNT_POSITION);
@@ -81,7 +78,6 @@ public class Superblock
     }
 
 
-
     /**
      * Returns the block with the given block number to the free list.
      * @param blockNumber - The block number of the block to return to the 
@@ -105,4 +101,32 @@ public class Superblock
         return false;
     }
 
+
+    public void format()
+    {
+        this.format(DEFAULT_INODE_BLOCK_COUNT);
+    }
+
+
+    public void format(int totalInodes)
+    {
+        for(int i = 0; i < totalInodes; i++)
+        {
+            Inode inode = new Inode();
+            inode.flag = Inode.FLAG_UNUSED;
+            inode.toDisk((short)i);
+        }
+
+        this.totalInodes = totalInodes;
+        freeList = this.totalInodes * (32/Disk.blockSize) + 2;
+
+        for(int i = freeList; i < this.totalBlocks; i++)
+        {
+            byte[] block = new byte[Disk.blockSize];
+
+            SysLib.int2bytes(i + 1, block, 0);
+            SysLib.rawwrite(i, block);
+        }
+        this.sync();
+    }
 }

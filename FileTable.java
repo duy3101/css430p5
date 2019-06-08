@@ -41,7 +41,7 @@ public class FileTable
                 
                 inode = new Inode(iNumber);
                 
-                if (mode.compareTo(FileSystem.READ))
+                if (mode.equals(FileSystem.READ))
                 {
 
                     if (inode.flag == Inode.FLAG_USED || inode.flag == Inode.FLAG_UNUSED)

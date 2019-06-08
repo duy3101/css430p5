@@ -29,7 +29,7 @@ public class Directory
         int offset = 0;
         for (int i = 0; i < fsizes.length; i++, offset+=4)
         {
-            fsizes[i] = SysLib.byte2int(data, offset);
+            fsizes[i] = SysLib.bytes2int(data, offset);
         }
 
         for (int i = 0; i < fnames.length; i++, offset+= maxChars * 2)
@@ -76,17 +76,16 @@ public class Directory
             {
                 int size;
                 char[] name;
-                if(filename.size()  > maxChars)
+                if(filename.length() > maxChars)
                 {
                     size = maxChars;
-                    filename = filename.substring(0, maxChars).toCharArray();
+                    name = filename.substring(0, maxChars).toCharArray();
                 }
                 else
                 {
-                    size = filename.size();
+                    size = filename.length();
+                    name = filename.toCharArray();
                 }
-                name = filename.toCharArray();
-
                 fsizes[i] = size;
                 fnames[i] = name;
                 return (short)i;
@@ -121,7 +120,7 @@ public class Directory
                 continue;
             }
 
-            for (int j = 0; i < fname[i].length; j++)
+            for (int j = 0; i < fnames[i].length; j++)
             {
                 if (fnames[i][j] != chars[j])
                 {
