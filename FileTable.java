@@ -36,7 +36,7 @@ public class FileTable
             }
             
 
-            if (iNumber > 0)
+            if (iNumber >= 0)
             {
                 
                 inode = new Inode(iNumber);

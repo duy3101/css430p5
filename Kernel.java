@@ -85,6 +85,10 @@ public class Kernel
                   // instantiate synchronized queues
                   ioQueue = new SyncQueue( );
                   waitQueue = new SyncQueue( scheduler.getMaxThreads( ) );
+
+                  // omstamtoate file system
+                  filesystem = new FileSystem(1000);
+
                   return OK;
                case EXEC:
                   return sysExec( ( String[] )args );
@@ -175,14 +179,13 @@ public class Kernel
                         return ERROR;
                      case STDOUT:
                         System.out.print( (String)args );
-                        break;
+                        return OK;
                      case STDERR:
                         System.err.print( (String)args );
-                        break;
+                        return OK;
                   }
 
                   myTcb = scheduler.getMyTcb();
-
                   if (myTcb != null)
                   {
                      FileTableEntry ftEnt = myTcb.getFtEnt(param);
@@ -211,14 +214,7 @@ public class Kernel
                   {
                      String[] arrayArgs = (String[]) args;
                      FileTableEntry ftEnt = filesystem.open(arrayArgs[0], arrayArgs[1]);
-
-                     if (ftEnt == null)
-                     {
-                        SysLib.cout("Error in open cannot create ftEnt \n");
-                        return ERROR;
-                     }
-
-                     return OK;
+                     return myTcb.getFd(ftEnt);
                   }
                   SysLib.cout("TCB is null in OPEN \n");
                   return ERROR;
@@ -265,35 +261,27 @@ public class Kernel
 
 
                case FORMAT:  // to be implemented in project
-                  myTcb = scheduler.getMyTcb();
-                  if ((myTcb != null))
+                  
+                  if (filesystem.format(param))
                   {
-                     if (filesystem.format(param))
-                     {
-                        return OK;
-                     }
-                     else
-                     {
-                        return ERROR;
-                     }
+                     return OK;
                   }
-                  return ERROR;
-
-
+                  else
+                  {
+                     return ERROR;
+                  }
+               
                case DELETE:  // to be implemented in project
-                  myTcb = scheduler.getMyTcb();
-                  if ((myTcb != null))
+
+                  if (filesystem.delete((String)args))
                   {
-                     if (filesystem.delete((String)args))
-                     {
-                        return OK;
-                     }
-                     else
-                     {
-                        return ERROR;
-                     }
+                     return OK;
                   }
-                  return ERROR;
+                  else
+                  {
+                     return ERROR;
+                  }
+ 
             }
             return ERROR;
 

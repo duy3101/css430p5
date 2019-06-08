@@ -62,41 +62,38 @@ public class FileSystem
 
     public FileTableEntry open(String filename, String mode)
     {
-        if (!mode.equals(READ) || !mode.equals(WRITE) || !mode.equals(READWRITE) || !mode.equals(APPEND))
+       
+        FileTableEntry anEntry = filetable.falloc(filename, mode);
+        // anEntry will be null if filename is not in there
+        
+        if (anEntry == null && mode.equals(READ))
         {
-            return null;
+            return anEntry;
         }
-        else
+            
+        synchronized(anEntry)
         {
-            FileTableEntry anEntry = filetable.falloc(filename, mode);
-            // anEntry will be null if filename is not in there
-            
-            if (anEntry == null && mode.equals(READ))
-                return anEntry;
-            
-            synchronized(anEntry)
+
+            if (mode.equals(APPEND))
             {
-
-                if (mode.equals(APPEND))
-                {
-                    seek(anEntry, 0, SEEK_END);
-                }
-
-                else if (mode.equals(READ) || mode.equals(READWRITE))
-                {
-                    seek(anEntry, 0, SEEK_SET);
-                }
-
-                else
-                {
-                    seek(anEntry, 0, SEEK_SET);
-                    deallocAllBlocks(anEntry);
-                }
-            
-                return anEntry;
-
+                seek(anEntry, 0, SEEK_END);
             }
+
+            else if (mode.equals(READ) || mode.equals(READWRITE))
+            {
+                seek(anEntry, 0, SEEK_SET);
+            }
+
+            else
+            {
+                seek(anEntry, 0, SEEK_SET);
+                deallocAllBlocks(anEntry);
+            }
+        
+            return anEntry;
+
         }
+        
     }
     
 
@@ -123,7 +120,7 @@ public class FileSystem
 
     public int read(FileTableEntry ftEnt, byte[] buffer)
     {
-        if (ftEnt.inode.flag != Inode.FLAG_READ)
+        if (ftEnt.inode.flag == Inode.FLAG_WRITE)
             return -1;
 
         seek(ftEnt, 0, SEEK_SET);
@@ -177,7 +174,7 @@ public class FileSystem
 
     public int write(FileTableEntry ftEnt, byte[] buffer)
     {
-        if (ftEnt.inode.flag != Inode.FLAG_WRITE)
+        if (ftEnt.inode.flag == Inode.FLAG_READ)
             return -1;
         
         int bytesWritten = 0;
