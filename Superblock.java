@@ -74,8 +74,8 @@ public class Superblock
             byte[] newBlock = new byte[Disk.blockSize];
             SysLib.rawread(freeBlock, newBlock);
             this.freeList = SysLib.bytes2int(newBlock, 0);
-            SysLib.int2bytes(0, newBlock, 0);
-            SysLib.rawwrite(freeBlock, newBlock);
+            // SysLib.int2bytes(0, newBlock, 0);
+            // SysLib.rawwrite(freeBlock, newBlock);
         }
         return freeBlock;
     }
@@ -88,7 +88,7 @@ public class Superblock
      *                      free list.
      * @return True if the return was successful, false otherwise.
      */
-    public int returnBlock(int blockNumber)
+    public boolean returnBlock(int blockNumber)
     {
         if (this.freeList >= 0) 
         {

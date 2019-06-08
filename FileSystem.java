@@ -4,6 +4,12 @@
 
 public class FileSystem
 {
+
+    public static final String READ = "r";
+    public static final String WRITE = "w";
+    public static final String READWRITE = "w+";
+    public static final String APPEND = "a";
+
     private Superblock superblock;
     private Directory directory;
     private FileTable filetable;
@@ -43,7 +49,32 @@ public class FileSystem
 
     public FileTableEntry open(String filename, String mode)
     {
-        return FileTableEntry;
+        if (!mode.equals(READ) || !mode.equals(WRITE) || !mode.equals(READWRITE) || !mode.equals(APPEND))
+        {
+            return null;
+        }
+        else
+        {
+
+            
+            FileTableEntry anEntry = filetable.falloc(filename, mode);
+            // anEntry will be null if filename is not in there
+            
+            if (anEntry == null && mode.equals(READ))
+                return anEntry;
+            
+            synchronized(anEntry)
+            {
+                if (anEntry == null)
+                {
+                    directory.ialloc(filename);
+                    
+                }
+
+            }
+
+
+        }
     }
 
     public boolean close(FileTableEntry ftEnt)
@@ -51,7 +82,7 @@ public class FileSystem
         return false;
     }
 
-    public int fsize(FileTableEntry ftEnt)
+    public int fsizes(FileTableEntry ftEnt)
     {
         return -1;
     }
