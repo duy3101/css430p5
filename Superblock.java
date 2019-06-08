@@ -1,22 +1,38 @@
-import sun.security.x509.DistributionPoint;
+/**
+ * A class to keep track of the total blocks and Inodes that are used by the
+ * FileSystem. It also keeps a pointer to a list of free blocks, and offers a
+ * few useful functions for interacting with the inode blocks, such as 
+ * {@link #getFreeBlock() getFreeBlock} and 
+ * {@link #returnBlock(int) returnBlock}.
+ */
 
 public class Superblock
 {
-    private final int defaultInodeBlocks = 64;
     public int totalBlocks; // the number of disk blocks
     public int totalInodes; // the number of inodes
     public int freeList; // the block number of the freeList's head
 
+    private static final int DEFAULT_INODE_BLOCK_COUNT = 64;
+    private static final int BLOCK_COUNT_POSITION = 0;
+    private static final int INODE_COUNT_POSITION = 4;
+    private static final int FREE_LIST_POSITION = 8;
+ 
 
+
+    /**
+     * SuperBlock Constructor. Initializes the SuperBlock using the given
+     * diskSize.
+     * @param diskSize - The number of Inodes to create on the disk.
+     */
     public Superblock(int diskSize)
     {
         byte[] bytes = new byte[Disk.blockSize];
 
         SysLib.rawread(0, bytes);
 
-        totalBlocks = SysLib.bytes2int(bytes, 0);    
-        totalInodes = SysLib.bytes2int(bytes, 4);    
-        freeList = SysLib.bytes2int(bytes, 8);
+        totalBlocks = SysLib.bytes2int(bytes, BLOCK_COUNT_POSITION);    
+        totalInodes = SysLib.bytes2int(bytes, INODE_COUNT_POSITION);    
+        freeList = SysLib.bytes2int(bytes, FREE_LIST_POSITION);
 
         if (bytes == diskSize && totalInodes > 0 && freeList >=2)
         {
@@ -27,39 +43,66 @@ public class Superblock
         {
             // need to format disk
             totalBlocks = diskSize;
-            SysLiB.format(defaultInodeBlocks);
+            SysLiB.format(DEFAULT_INODE_BLOCK_COUNT);
         } 
     }
 
+
+    /**
+     * Writes the data stored in this SuperBlock to the disk.
+     */
     public void sync()
     {
         // write back totalBlocks, inodeBlocks, and freeList
-        byte[] bytes = new byte[Disk.blockSize];
-        SysLib.rawread(0, bytes);
-
-        SysLib.int2bytes(totalBlocks, bytes, 0);
-        SysLib.int2bytes(totalInodes, bytes, 4);
-        SysLib.int2bytes(freeList, bytes, 8);
-
-
-        SysLib.rawwrite(0, bytes);
-
-        SysLib.sync();
-
+        byte[] block = new byte[Disk.blockSize];
+        SysLib.int2bytes(this.totalBlocks, block, BLOCK_COUNT_POSITION);
+        SysLib.int2bytes(this.totalInodes, block, INODE_COUNT_POSITION);
+        SysLib.int2bytes(this.freeList, block, FREE_LIST_POSITION);
+        SysLib.rawwrite(0, block);
     }
 
+
+    /**
+     * Gets the next free block.
+     * @return The block number of the next available free block. -1 
+     *         if there are no free blocks available.
+     */
     public int getFreeBlock()
     {
-        byte[] bytes = new byte[Disk.blockSize];
-        SysLib.rawread(freeList, bytes);
-        //freeBlock = SysLib.bytes2int(bytes, offset)
-        
-        return -1;
+        int freeBlock = this.freeList;
+        if (freeBlock != -1) {
+            byte[] newBlock = new byte[Disk.blockSize];
+            SysLib.rawread(freeBlock, newBlock);
+            this.freeList = SysLib.bytes2int(newBlock, 0);
+            SysLib.int2bytes(0, newBlock, 0);
+            SysLib.rawwrite(freeBlock, newBlock);
+        }
+        return freeBlock;
     }
 
+
+
+    /**
+     * Returns the block with the given block number to the free list.
+     * @param blockNumber - The block number of the block to return to the 
+     *                      free list.
+     * @return True if the return was successful, false otherwise.
+     */
     public int returnBlock(int blockNumber)
     {
-        // enqueue a given block to the end of the freeList
+        if (this.freeList >= 0) 
+        {
+            byte[] block = new byte[Disk.blockSize];
+            for (int i = 0; i < Disk.blockSize; i++)
+            {
+                block[i] = 0;
+            }
+            SysLib.int2bytes(this.freeList, block, 0);
+            SysLib.rawwrite(freeList, block);
+            this.freeList = blockNumber;
+            return true;
+        }
+        return false;
     }
 
 }
