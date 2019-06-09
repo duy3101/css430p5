@@ -115,12 +115,12 @@ public class Directory
         for (int i = 0; i < fnames.length; i++)
         {
 
-            if (fsizes[i] == chars.length)
+            if (fsizes[i] != chars.length)
             {
                 continue;
             }
 
-            for (int j = 0; i < fnames[i].length; j++)
+            for (int j = 0; j < fnames[i].length; j++)
             {
                 if (fnames[i][j] != chars[j])
                 {

@@ -48,7 +48,23 @@ public class Inode
      */
     public Inode(short iNumber)
     {
-        this.toFromDisk(iNumber, READ);
+        this.direct = new short[DIRECT_SIZE];
+        int offset = 1 + iNumber / 16;
+        byte[] block = new byte[Disk.blockSize];
+        SysLib.rawread(offset, block);
+        offset = iNumber % 16 * INODE_SIZE;
+        this.length = SysLib.bytes2int(block, offset);
+        offset += 4;
+        this.count = SysLib.bytes2short(block, offset);
+        offset += 2;
+        this.flag = SysLib.bytes2short(block, offset);
+        offset += 2;
+        for(int i = 0; i < DIRECT_SIZE; i++)
+        {
+            this.direct[i] = SysLib.bytes2short(block, offset);
+            offset += 2;
+        }
+        this.indirect = SysLib.bytes2short(block, offset);
     }
 
 
@@ -58,7 +74,49 @@ public class Inode
      */
     void toDisk(short iNumber)
     {
-        this.toFromDisk(iNumber, WRITE); 
+        // byte[] block = new byte[Disk.blockSize];
+        
+        // int offset = iNumber % 16 * INODE_SIZE;
+        // SysLib.int2bytes(length, block, offset);
+        // offset += 4;
+        // SysLib.short2bytes(count, block, offset);
+        // offset += 2;
+        // SysLib.short2bytes(flag, block, offset);
+        // offset += 2;
+        // for (int i = 0; i < DIRECT_SIZE; i++)
+        // {
+        //     SysLib.short2bytes(this.direct[i], block, offset);
+        //     //System.out.println("Direct stuff: " + this.direct[i]);
+        //     offset += 2;
+        // }
+        // SysLib.short2bytes(this.indirect, block, offset);
+        // offset += 2;
+        // offset = 1 + iNumber / 16;
+        // final byte[] newBlock = new byte[Disk.blockSize];
+        // SysLib.rawread(offset, newBlock);
+        // System.arraycopy(block, 0, newBlock, iNumber % 16 * INODE_SIZE, 
+        //     INODE_SIZE);
+        // SysLib.rawwrite(offset, newBlock);
+        byte[] iNode = new byte[INODE_SIZE];
+        int offset = 0;
+        SysLib.int2bytes(this.length, iNode, offset);
+        offset += 4;
+        SysLib.short2bytes(this.count, iNode, offset);
+        offset += 2;
+        SysLib.short2bytes(this.flag, iNode, offset);
+        offset += 2;
+
+        for(int i = 0; i < DIRECT_SIZE; i++)
+        {
+            SysLib.short2bytes(this.direct[i], iNode, offset);
+            offset += 2;
+        }
+        SysLib.short2bytes(this.indirect, iNode, offset);
+        offset = 1 + iNumber / 16;
+        byte[] block = new byte[Disk.blockSize];
+        SysLib.rawread(offset, block);
+        System.arraycopy(iNode, 0, block, iNumber % 16 * INODE_SIZE, INODE_SIZE);
+        SysLib.rawwrite(offset, block);
     }
 
 
@@ -117,12 +175,17 @@ public class Inode
         int blockNumber = offset / Disk.blockSize;
         if (blockNumber < DIRECT_SIZE)
         {
+            System.out.println("targetBlock: " + this.direct[blockNumber]);
             return this.direct[blockNumber];
         }
         if (this.indirect == UNREGISTERED)
         {
+            System.out.println("targetBlock: Indirect " + this.indirect);
+
             return -1;
         }
+        System.out.println("confusion");
+
         byte[] block = new byte[Disk.blockSize];
         SysLib.rawread((int)this.indirect, block);
         return SysLib.bytes2short(block, (blockNumber - DIRECT_SIZE) * 2);
@@ -152,6 +215,7 @@ public class Inode
             }
 
             this.direct[blockPosition] = blockNumber;
+            System.out.println("direct " + this.direct[blockPosition]);
             return SUCCESS;
         }
         else
@@ -173,6 +237,10 @@ public class Inode
 
             SysLib.short2bytes(blockNumber, block, blockLocation);
             SysLib.rawwrite((int)this.indirect, block);
+            
+            System.out.println("direct" + this.direct[blockPosition]);
+            System.out.println("indirect" + this.indirect);
+
             return SUCCESS;
         }
     }
@@ -225,6 +293,7 @@ public class Inode
         for (int i = 0; i < DIRECT_SIZE; i++)
         {
             this.direct[i] = SysLib.bytes2short(block, offset);
+            //System.out.println("Direct stuff: " + this.direct[i]);
             offset += 2;
         }
         this.indirect = SysLib.bytes2short(block, offset);
