@@ -124,11 +124,19 @@ public class FileSystem
         if (ftEnt.inode.flag == Inode.FLAG_WRITE)
             return -1;
         
+<<<<<<< HEAD
         // System.out.println("count : " + ftEnt.count);
         // System.out.println("fte inumber : " + ftEnt.iNumber);
         // System.out.println("fte seek : " + ftEnt.seekPtr);
         // System.out.println("fte direct[0] : " + ftEnt.inode.direct[0]);
         // System.out.println("fte inode length : " + ftEnt.inode.length);
+=======
+        System.out.println("count : " + ftEnt.count);
+        System.out.println("fte inumber : " + ftEnt.iNumber);
+        System.out.println("fte seek : " + ftEnt.seekPtr);
+        System.out.println("fte direct[0] : " + ftEnt.inode.direct[0]);
+        System.out.println("fte inode length : " + ftEnt.inode.length);
+>>>>>>> 7752eade4d212799e26c0bdd7b3c8d76dc46c11d
 
         synchronized(ftEnt)
         {
@@ -375,6 +383,11 @@ public class FileSystem
                 }
             }
         }
+<<<<<<< HEAD
+=======
+        
+        seek(ftEnt, 0, SEEK_SET);
+>>>>>>> 7752eade4d212799e26c0bdd7b3c8d76dc46c11d
         ftEnt.inode.toDisk(ftEnt.iNumber);
         return bytesWritten;
     }
