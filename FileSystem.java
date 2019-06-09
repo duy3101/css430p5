@@ -64,11 +64,11 @@ public class FileSystem
     {
        
         FileTableEntry anEntry = filetable.falloc(filename, mode);
+        SysLib.cout("ftEnt.iNumber: " + anEntry.iNumber);
         // anEntry will be null if filename is not in there
         
         if (anEntry == null && mode.equals(READ))
         {
-            System.out.println("SHOULD NOT HAPPEN");
             return anEntry;
         }
             
@@ -82,7 +82,6 @@ public class FileSystem
 
             else if (mode.equals(READ) || mode.equals(READWRITE))
             {
-                System.out.println("SHOULD HAPPEN");
                 seek(anEntry, 0, SEEK_SET);
             }
 
@@ -130,7 +129,7 @@ public class FileSystem
         System.out.println("count : " + ftEnt.count);
         System.out.println("fte inumber : " + ftEnt.iNumber);
         System.out.println("fte seek : " + ftEnt.seekPtr);
-        System.out.println("fte indirect : " + ftEnt.inode.indirect);
+        System.out.println("fte direct[0] : " + ftEnt.inode.direct[0]);
         System.out.println("fte inode length : " + ftEnt.inode.length);
 
         synchronized(ftEnt)
@@ -237,7 +236,8 @@ public class FileSystem
                 }
             }
             
-            
+            seek(ftEnt, 0, SEEK_SET);
+            ftEnt.inode.toDisk(ftEnt.iNumber);
             return bytesWritten;
         }
         else  // if mode is APPEND
@@ -315,8 +315,9 @@ public class FileSystem
                 }
             }
         }
-
+        
         seek(ftEnt, 0, SEEK_SET);
+        ftEnt.inode.toDisk(ftEnt.iNumber);
         return bytesWritten;
     }
 
@@ -332,7 +333,7 @@ public class FileSystem
         {
             if (ftEnt.inode.direct[i] != -1)
             {
-                superblock.returnBlock(i);
+                superblock.returnBlock(ftEnt.inode.direct[i]);
                 ftEnt.inode.direct[i] = -1;
             }
         }

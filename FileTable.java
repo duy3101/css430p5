@@ -1,4 +1,3 @@
-import java.net.http.WebSocket;
 import java.util.Vector;
 
 import javax.lang.model.util.ElementScanner6;
@@ -20,7 +19,7 @@ public class FileTable
     public synchronized FileTableEntry falloc(String filename, String mode)
     {
     
-        short iNumber = -1;
+        short iNumber;
         Inode inode = null;
 
         // allocate/retrieve and register the corresponding inode using dir
@@ -33,9 +32,13 @@ public class FileTable
             else
             {
                 iNumber = dir.namei(filename);
-                
             }
             
+            if (iNumber < 0)  // if filename is not an inode yet
+            {
+                SysLib.cout("GOT ALLOCATED");
+                iNumber = dir.ialloc(filename);
+            }
 
             if (iNumber >= 0)
             {
