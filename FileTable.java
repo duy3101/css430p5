@@ -108,11 +108,6 @@ public class FileTable
             }
 
             
-
-
-
-
-
             else
             {
                 //iNumber is somethingelse

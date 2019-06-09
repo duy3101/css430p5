@@ -17,6 +17,7 @@ public class Inode
     private static final int WRITE = 1;
     private static final short NULL_POINTER = -1;
     private static final short UNREGISTERED  = -1;
+    private static final short INDIRECT_ERROR  = -2;
 
     
     public int length;  // file size in bytes
@@ -74,29 +75,6 @@ public class Inode
      */
     void toDisk(short iNumber)
     {
-        // byte[] block = new byte[Disk.blockSize];
-        
-        // int offset = iNumber % 16 * INODE_SIZE;
-        // SysLib.int2bytes(length, block, offset);
-        // offset += 4;
-        // SysLib.short2bytes(count, block, offset);
-        // offset += 2;
-        // SysLib.short2bytes(flag, block, offset);
-        // offset += 2;
-        // for (int i = 0; i < DIRECT_SIZE; i++)
-        // {
-        //     SysLib.short2bytes(this.direct[i], block, offset);
-        //     //System.out.println("Direct stuff: " + this.direct[i]);
-        //     offset += 2;
-        // }
-        // SysLib.short2bytes(this.indirect, block, offset);
-        // offset += 2;
-        // offset = 1 + iNumber / 16;
-        // final byte[] newBlock = new byte[Disk.blockSize];
-        // SysLib.rawread(offset, newBlock);
-        // System.arraycopy(block, 0, newBlock, iNumber % 16 * INODE_SIZE, 
-        //     INODE_SIZE);
-        // SysLib.rawwrite(offset, newBlock);
         byte[] iNode = new byte[INODE_SIZE];
         int offset = 0;
         SysLib.int2bytes(this.length, iNode, offset);
@@ -130,40 +108,6 @@ public class Inode
     }
 
 
-    /**
-     * Sets this Inode's index block number to the given value, and writes it
-     * the the disk in that position.
-     * @param indirectBlockNumber - The value to set this Inode's index block
-     *                           number to.
-     * @return True if the indirectBlockNumber was set successfully. Returns false
-     * if any of the block's inodes are unregistered or if the block itself is
-     * unregistered.
-     */
-    boolean setIndirectBlock(short indirectBlockNumber)
-    {
-        for (int i = 0; i < DIRECT_SIZE; i++)
-        {
-            if (this.direct[i] == NULL_POINTER)
-            {
-                return false;
-            }
-        }
-        if (this.indirect != UNREGISTERED)
-        {
-            return false;
-        }
-        this.indirect = indirectBlockNumber;
-
-        byte[] block = new byte[Disk.blockSize];
-        for (int i = 0; i < Disk.blockSize / 2; i++)
-        {
-            SysLib.short2bytes((short)(-1), block, i * 2);
-        }
-
-        SysLib.rawwrite((int)indirect, block);
-        return true;
-    }
-
 
     /**
      * Finds the block at the given offset and returns its block number.
@@ -175,19 +119,18 @@ public class Inode
         int blockNumber = offset / Disk.blockSize;
         if (blockNumber < DIRECT_SIZE)
         {
-            System.out.println("targetBlock: " + this.direct[blockNumber]);
             return this.direct[blockNumber];
         }
         if (this.indirect == UNREGISTERED)
         {
-            System.out.println("targetBlock: Indirect " + this.indirect);
-
-            return -1;
+            return INDIRECT_ERROR;
         }
-        System.out.println("confusion");
+        
 
         byte[] block = new byte[Disk.blockSize];
         SysLib.rawread((int)this.indirect, block);
+        System.out.println("Confusion... "
+        + SysLib.bytes2short(block, (blockNumber - DIRECT_SIZE) * 2));
         return SysLib.bytes2short(block, (blockNumber - DIRECT_SIZE) * 2);
     }
 
@@ -203,6 +146,7 @@ public class Inode
     int registerBlock(int offset, short blockNumber)
     {
         int blockPosition = offset / Disk.blockSize;
+
         if (blockPosition < DIRECT_SIZE)
         {
             if (this.direct[blockPosition] != NULL_POINTER)
@@ -222,7 +166,7 @@ public class Inode
         {
             if (this.indirect == UNREGISTERED)
             {
-                this.indirect = blockNumber;
+                return ERROR;
             }
 
             byte[] block = new byte[Disk.blockSize];
@@ -238,13 +182,37 @@ public class Inode
             SysLib.short2bytes(blockNumber, block, blockLocation);
             SysLib.rawwrite((int)this.indirect, block);
             
-            System.out.println("direct" + this.direct[blockPosition]);
+            //System.out.println("direct" + this.direct[blockPosition]);
             System.out.println("indirect" + this.indirect);
 
             return SUCCESS;
         }
     }
 
+
+
+    /**
+     * Sets this Inode's index block number to the given value, and writes it
+     * the the disk in that position.
+     * @param indirectBlockNumber - The value to set this Inode's index block
+     *                           number to.
+     * @return True if the indirectBlockNumber was set successfully. Returns false
+     * if any of the block's inodes are unregistered or if the block itself is
+     * unregistered.
+     */
+    boolean setIndirectBlock(short indirectBlockNumber)
+    {
+        this.indirect = indirectBlockNumber;
+
+        byte[] block = new byte[Disk.blockSize];
+        for (int i = 0; i < Disk.blockSize / 2; i++)
+        {
+            SysLib.short2bytes((short)0, block, i * 2);
+        }
+
+        SysLib.rawwrite((int)indirect, block);
+        return true;
+    }
 
     /**
      * Frees a block, returning the data within the block and unregistering the
