@@ -1,4 +1,10 @@
-
+// File:  Inode.java
+// Group: Marc Skaarup, Dewey Nguyen, Jake Stewart
+// Class: CSS430
+//
+// Build for ThreadOS: javac *.java
+//                     java Boot
+//                     l Test5
 
 
 
@@ -146,7 +152,8 @@ public class Inode
     int registerBlock(int offset, short blockNumber)
     {
         int blockPosition = offset / Disk.blockSize;
-
+        
+        // register a block to a direct slot if there is an open one
         if (blockPosition < DIRECT_SIZE)
         {
             if (this.direct[blockPosition] != NULL_POINTER)
@@ -162,6 +169,7 @@ public class Inode
             System.out.println("direct " + this.direct[blockPosition]);
             return SUCCESS;
         }
+        // if all direct slots are full, register a block to an indirect slot
         else
         {
             if (this.indirect == UNREGISTERED)

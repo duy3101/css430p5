@@ -1,3 +1,11 @@
+// File:  FileTable.java
+// Group: Marc Skaarup, Dewey Nguyen, Jake Stewart
+// Class: CSS430
+//
+// Build for ThreadOS: javac *.java
+//                     java Boot
+//                     l Test5
+
 import java.util.Vector;
 
 import javax.lang.model.util.ElementScanner6;
@@ -25,13 +33,13 @@ public class FileTable
         // allocate/retrieve and register the corresponding inode using dir
         while (true)
         {
-            if (filename.equals("/"))
+            if (filename.equals("/"))  // if is directory
             {
                 iNumber = 0;
             }
             else
             {
-                iNumber = dir.namei(filename);
+                iNumber = dir.namei(filename);  // find the file in directory
             }
             
             if (iNumber < 0)  // if filename is not an inode yet
@@ -45,20 +53,26 @@ public class FileTable
                 
                 inode = new Inode(iNumber);
                 
+                // if opening with read access
                 if (mode.equals(FileSystem.READ))
                 {
-
+                    // if the file is currently not being read, set flag
+                    // to read and allow access to read
                     if (inode.flag == Inode.FLAG_USED || inode.flag == Inode.FLAG_UNUSED)
                     {
                         inode.flag = Inode.FLAG_READ;
                         break;
                     }
 
+                    // if the file is currently being read, allow access to read
                     else if (inode.flag == Inode.FLAG_READ)
                     {
                         break;
                     }
 
+                    // if the file is currently being written to by another user
+                    // wait for the user to finish and then set the flag to read
+                    // and now allow access to read
                     else if (inode.flag == Inode.FLAG_WRITE)
                     {
                         try 
@@ -78,15 +92,18 @@ public class FileTable
                     }
                 }
 
+                // all other modes are able to write, thus have same conditions
                 else // "w", "w+", "a"
                 {
-
+                    // if file is not being read from or written to, set flag to write and
+                    // allow this entry to write
                     if (inode.flag == Inode.FLAG_USED || inode.flag == Inode.FLAG_UNUSED)
                     {
                         inode.flag = Inode.FLAG_WRITE;
                         break;
                     }
-
+                    // if file is being written to or read from, wait for the user to finish
+                    // and then set flag to write and allow this entry to write
                     else if (inode.flag == Inode.FLAG_WRITE || inode.flag == Inode.FLAG_READ)
                     {
                         try 

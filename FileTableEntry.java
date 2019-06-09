@@ -1,4 +1,10 @@
-
+// File:  FileTableEntry.java
+// Group: Marc Skaarup, Dewey Nguyen, Jake Stewart
+// Class: CSS430
+//
+// Build for ThreadOS: javac *.java
+//                     java Boot
+//                     l Test5
 
 
 

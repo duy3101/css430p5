@@ -1,4 +1,10 @@
-
+// File:  FileSystem.java
+// Group: Marc Skaarup, Dewey Nguyen, Jake Stewart
+// Class: CSS430
+//
+// Build for ThreadOS: javac *.java
+//                     java Boot
+//                     l Test5
 
 
 
@@ -41,6 +47,8 @@ public class FileSystem
 
     public void sync()
     {
+        // open the directory entry and write the directory information
+        // to the disk, then close the entry and sync the superblock
         FileTableEntry dirEnt = open(ROOT_NAME, WRITE);
         byte[] dirData = directory.directory2bytes();
         this.write(dirEnt, dirData);
@@ -50,6 +58,7 @@ public class FileSystem
 
     public boolean format(int files)
     {
+        // format the disk
         if(this.filetable.fempty())
         {
             this.superblock.format(files);
@@ -62,29 +71,33 @@ public class FileSystem
 
     public FileTableEntry open(String filename, String mode)
     {
-       
+       // create a file table entry with the filename and given mode
         FileTableEntry anEntry = filetable.falloc(filename, mode);
         SysLib.cout("ftEnt.iNumber: " + anEntry.iNumber);
         // anEntry will be null if filename is not in there
         
+        // if trying to read a file that doesn't exist, don't create a file
         if (anEntry == null && mode.equals(READ))
         {
             return anEntry;
         }
             
+        // set the seekPtr to the appropriate place in the file
         synchronized(anEntry)
         {
-
+            // seekPtr to end of file for append
             if (mode.equals(APPEND))
             {
                 seek(anEntry, 0, SEEK_END);
             }
-
+            
+            // seekPtr to beginning of file for read and readwrite
             else if (mode.equals(READ) || mode.equals(READWRITE))
             {
                 seek(anEntry, 0, SEEK_SET);
             }
-
+            
+            // seekPtr to beginning of file for write and deallocate all blocks
             else
             {
                 seek(anEntry, 0, SEEK_SET);
@@ -97,9 +110,9 @@ public class FileSystem
         
     }
     
-
     public boolean close(FileTableEntry ftEnt)
     {
+        // reduces the count of the ftEnt count
         synchronized(ftEnt)
         {
             ftEnt.count--;
@@ -108,11 +121,13 @@ public class FileSystem
                 return true;
             }
         }
+        // if count == 0 (no more ftEnt of this type), free it from filetable
         return this.filetable.ffree(ftEnt);
     }
 
     public int fsizes(FileTableEntry ftEnt)
     {
+        // returns the size of the file
         synchronized(ftEnt)
         {
             return ftEnt.inode.length;
@@ -121,19 +136,17 @@ public class FileSystem
 
     public int read(FileTableEntry ftEnt, byte[] buffer)
     {
+        // fills the given buffer with the file data from ftEnt
+        
         if (ftEnt.inode.flag == Inode.FLAG_WRITE)
             return -1;
-        
-        // System.out.println("count : " + ftEnt.count);
-        // System.out.println("fte inumber : " + ftEnt.iNumber);
-        // System.out.println("fte seek : " + ftEnt.seekPtr);
-        // System.out.println("fte direct[0] : " + ftEnt.inode.direct[0]);
-        // System.out.println("fte inode length : " + ftEnt.inode.length);
 
         synchronized(ftEnt)
         {
-            int seekPosition = ftEnt.seekPtr;
-            int startPosition = seekPosition % 512;
+            int seekPosition = ftEnt.seekPtr;  // where seekPtr starts at
+            int startPosition = seekPosition % 512;  // start position in the block
+            
+            // how much space is left in the block, given the startPosition
             int remainingStartBlock = Disk.blockSize - startPosition;
             byte[] bytes = new byte[Disk.blockSize];
             
@@ -142,6 +155,7 @@ public class FileSystem
             boolean willReadFullFirstBlock = true;
             if (remainingStartBlock > buffer.length)
             {
+                // keep arraycopy from copying too much data (maxes out at buffer.length)
                 willReadFullFirstBlock = false;
                 remainingStartBlock = buffer.length;
             }
@@ -149,14 +163,15 @@ public class FileSystem
             short block = ftEnt.inode.findTargetBlock(ftEnt.seekPtr);
             if (block != (short)-1)
             {
+                // read from the first block
                 SysLib.rawread(block, bytes);
                 System.arraycopy(bytes, startPosition, buffer, 0, remainingStartBlock);
                 bytesRead += remainingStartBlock;
-                //ftEnt.seekPtr += remainingStartBlock;
+                ftEnt.seekPtr += remainingStartBlock;
             }
             
 
-
+            // find out how much of the file is left
             int fileLeft = ftEnt.inode.length - (bytesRead + seekPosition);
             if (fileLeft > buffer.length)
             {
@@ -164,31 +179,28 @@ public class FileSystem
             }
 
             int fullBlocks = fileLeft / Disk.blockSize;
-            int partialBlock = fileLeft % Disk.blockSize;
-            //System.out.println("fullblocks = " + fullBlocks + " partialblocks = " + partialBlock);
-           
-
-
-
+            int partialBlock = fileLeft % Disk.blockSize;  // how much data the last block contains
 
             for (int i = fullBlocks; i > 0; i--)
             {
+                // find next block to read data from
                 block = ftEnt.inode.findTargetBlock(ftEnt.seekPtr);
                 if (block == (short)-1)
                 {
                     // cannot find block
                     break;
                 }
-
+                
+                // read data from disk and copy into the buffer
                 SysLib.rawread(block, bytes);
                 System.arraycopy(bytes, 0, buffer, bytesRead, Disk.blockSize);
 
 
-                //ftEnt.seekPtr += Disk.blockSize;
+                ftEnt.seekPtr += Disk.blockSize;
                 bytesRead += Disk.blockSize;
             }
 
-
+            // if the first block was read and there is a partial block amount to read
             if (partialBlock > 0 && willReadFullFirstBlock)
             {
                 block = ftEnt.inode.findTargetBlock(ftEnt.seekPtr);
@@ -198,19 +210,19 @@ public class FileSystem
                 System.out.println(" bytesread = " + bytesRead);
                 System.arraycopy(bytes, 0, buffer, bytesRead, partialBlock);
 
-                //ftEnt.seekPtr += Disk.blockSize;
+                ftEnt.seekPtr += Disk.blockSize;
                 bytesRead += partialBlock;
             }
 
             seek(ftEnt, 0, SEEK_SET);
             return bytesRead;
-            
         }
-     
     }
 
     public int write(FileTableEntry ftEnt, byte[] buffer)
     {
+        // writes data from the buffer to the disk
+        
         if (ftEnt.inode.flag == Inode.FLAG_READ)
             return -1;
         
@@ -223,14 +235,14 @@ public class FileSystem
 
         if (ftEnt.mode != APPEND)  // if mode is WRITE or READWRITE
         {
-
-
             byte[] bytes = new byte[Disk.blockSize];
 
             synchronized(ftEnt)
             {   
                 int seekPosition = ftEnt.seekPtr;
                 int startPosition = seekPosition % 512;
+                
+                // how much space is left in the block, given the startPosition
                 int remainingStartBlock = Disk.blockSize - startPosition;                
 
                 boolean willWriteFullFirstBlock = true;
@@ -246,36 +258,33 @@ public class FileSystem
                 
                 if (block != (short)-1)
                 {
+                    // write to the first block
                     System.arraycopy(buffer, 0, bytes, startPosition, remainingStartBlock);
                     SysLib.rawwrite(block, bytes);
                     bytesWritten += remainingStartBlock;
 
                     ftEnt.seekPtr += bytesWritten;
+                    
+                    // update the inode's filelength
                     ftEnt.inode.length += remainingStartBlock;
                 }
                 
     
-    
+                // find out how much data is left in the buffer
                 int fileLeft = buffer.length - ftEnt.inode.length;
    
                 int fullBlocks = fileLeft / Disk.blockSize;
                 int partialBlock = fileLeft % Disk.blockSize;
 
-                System.out.println("fileleft: " + fileLeft);
-                System.out.println("fullBs: " + fullBlocks);
-                System.out.println("partial: " + partialBlock);
-
-                System.out.println("seek before loop: " + ftEnt.seekPtr);
-
 
                 for (int i = fullBlocks; i > 0; i--)
                 {
-                    System.out.println("setBlock inside calling");
+                    // register a freeblock to the inode to be written to
                     block = setBlock(block, ftEnt);
-                    System.out.println();
 
                     if (block < Disk.blockSize && block != (short)-1)  // block found and within disk block range
                     {
+                        // write blockSize amount from buffer to byte array to be written to disk
                         System.arraycopy(buffer, bytesWritten, bytes, 0, Disk.blockSize);
                         SysLib.rawwrite(block, bytes);
 
@@ -291,6 +300,7 @@ public class FileSystem
                 }
                 if (partialBlock > 0 && willWriteFullFirstBlock)
                 {
+                    // if there is still data to fill part of a block, write the rest of the buffer
                     block = setBlock(block, ftEnt);
 
                     System.arraycopy(buffer, bytesWritten, bytes, 0, partialBlock);
@@ -304,6 +314,8 @@ public class FileSystem
             }
             
             seek(ftEnt, 0, SEEK_SET);
+            
+            // write the updated inode to disk
             ftEnt.inode.toDisk(ftEnt.iNumber);
             return bytesWritten;
         }
@@ -357,6 +369,7 @@ public class FileSystem
                 }
                 for (int i = fullBlocks; i > 0; i--)
                 {
+                    // register a free block and write a full blockSize amount
                     block = setBlock(block, ftEnt);
                     if (block < Disk.blockSize && block != (short)-1)
                     {
@@ -375,7 +388,7 @@ public class FileSystem
                   
                 if (willFillFirstBlock && partialEndBlock > 0)
                 {
-                    SysLib.cout("End part");
+                    // write the rest of the buffer to the last block
                     block = setBlock(block, ftEnt);
                     if (block < Disk.blockSize && block != (short)-1)
                     {
@@ -390,12 +403,16 @@ public class FileSystem
                 }
             }
         }
+        // write the updated inode to the disk
         ftEnt.inode.toDisk(ftEnt.iNumber);
         return bytesWritten;
     }
 
     private boolean deallocAllBlocks(FileTableEntry ftEnt)
     {
+        // deallocates all of the blocks in a fileTableEntry's file
+        // and saves the updated inode to the disk
+        
         if (ftEnt == null)
             return false;
 
@@ -424,6 +441,7 @@ public class FileSystem
 
     public boolean delete(String filename)
     {
+        // deletes a file
         FileTableEntry ftEnt = this.open(filename, WRITE);
         return this.close(ftEnt) && this.directory.ifree(ftEnt.iNumber);
     }
@@ -438,6 +456,8 @@ public class FileSystem
 
     public int seek(FileTableEntry ftEnt, int offset, int whence)
     {
+        // moves the seekPtr to beginning, current position, or end
+        // each option can contain an offset
         synchronized(ftEnt)
         {
             int filelength = ftEnt.inode.length;
@@ -493,23 +513,26 @@ public class FileSystem
 
     public short setBlock(short block, FileTableEntry ftEnt)
     {
+        // search for the given block
         block = ftEnt.inode.findTargetBlock(ftEnt.seekPtr);
+        
+        // if the block has not been registered, register it to a free block
         if (block == -1)
         {
-
+            // will register the block to ftEnt.inode's next available direct slot
             short freeBlock = (short)superblock.getFreeBlock();
             ftEnt.inode.registerBlock(ftEnt.seekPtr, freeBlock);
-            //System.out.println("offset " + ftEnt.seekPtr);
             return freeBlock;
         }
         else if (block == -2)
         {
+            // once ftEnt.inode's direct fills up, initializes the indirect block
+            // and registers the block to an indirect slot
             short indirectBlock = (short)superblock.getFreeBlock();
             ftEnt.inode.setIndirectBlock(indirectBlock);
 
             short freeBlock = (short)superblock.getFreeBlock();
             ftEnt.inode.registerBlock(ftEnt.seekPtr, freeBlock);
-            System.out.println("offsetCHECK " + ftEnt.seekPtr);
             return freeBlock;
         }
 

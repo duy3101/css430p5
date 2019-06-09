@@ -1,3 +1,11 @@
+// File:  TCB.java
+// Group: Marc Skaarup, Dewey Nguyen, Jake Stewart
+// Class: CSS430
+//
+// Build for ThreadOS: javac *.java
+//                     java Boot
+//                     l Test5
+
 public class TCB {
     private Thread thread = null;
     private int tid = 0;

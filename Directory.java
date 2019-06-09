@@ -1,4 +1,10 @@
-
+// File:  Directory.java
+// Group: Marc Skaarup, Dewey Nguyen, Jake Stewart
+// Class: CSS430
+//
+// Build for ThreadOS: javac *.java
+//                     java Boot
+//                     l Test5
 
 
 
@@ -68,7 +74,9 @@ public class Directory
 
     public short ialloc(String filename)
     {
-
+        // finds the next open spot on the directory
+        // adds the given filename into the directory
+        // returns -1 if directory is full
 
         for (int i = 1; i < fsizes.length; i++)
         {
@@ -97,6 +105,7 @@ public class Directory
 
     public boolean ifree(short iNumber)
     {
+        // sets the fsize to 0 to indicate a free directory space
         if (fsizes[iNumber] > 0)
         {
             fsizes[iNumber] = 0; 
@@ -109,6 +118,9 @@ public class Directory
 
     public short namei(String filename)
     {
+        // finds a file in the directory by checking if the input
+        // is the same length, and then if it has the same characters
+        // returns -1 if the file was not found
         char[] chars = filename.toCharArray();
 
         fnamesloop:
