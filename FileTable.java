@@ -10,20 +10,32 @@
 import java.util.Vector;
 import javax.lang.model.util.ElementScanner6;
 
+/**
+* A FileTable class manages FileTableEntries by allocate/retrive/delete
+* them in a table
+*/
 public class FileTable
 {
-
-
-
     private Vector table;   // the actual entity of this file table
     private Directory dir;  // the root directory
 
+    /**
+     * FileTable constructor
+     * @param directory - Takes in a Directory object
+     * @return void
+     */
     public FileTable(Directory directory)
     {
         table = new Vector();   // instantiate a file table
         dir = directory;        // receive a reference to the Directory from the filesystem
     }
 
+    /**
+     * allocate a FileTableEntry to the FileTable
+     * @param filename name of file
+     * @param mode "r", "w", "w+" or "a"
+     * @return a FileTableEntry object
+     */
     public synchronized FileTableEntry falloc(String filename, String mode)
     {
     
@@ -80,7 +92,6 @@ public class FileTable
                             inode.flag = Inode.FLAG_READ;
                         }
                         catch(InterruptedException e) {}
-
                         break;
                     }
 
@@ -111,7 +122,6 @@ public class FileTable
                             inode.flag = Inode.FLAG_WRITE;
                         }
                         catch(InterruptedException e) {}
-
                         break;
                     }
                     
@@ -122,8 +132,6 @@ public class FileTable
                     }
                 }
             }
-
-            
             else
             {
                 //iNumber is somethingelse
@@ -140,6 +148,11 @@ public class FileTable
         return anEntry;   
     }
 
+    /**
+     * free a FileTableEntry from the FileTable
+     * @param anEntry a FileTableEntry
+     * @return a boolean whether its freed or not
+     */
     public synchronized boolean ffree(FileTableEntry anEntry)
     {
         // recieve a file table entry reference
@@ -171,10 +184,14 @@ public class FileTable
     
     }
 
+    /**
+     * check whether the FileTable is empty
+     * @return a boolean whether its empty or not
+     */
     public synchronized boolean fempty()
     {
-        return table.isEmpty();
         // return if table is empty
         // should be called before starting a format
+        return table.isEmpty();
     }
 }

@@ -6,6 +6,12 @@
 //                     java Boot
 //                     l Test5
 
+
+/**
+ * A Inode class that keeps track of pointers to the data blocks
+ * through direct[] and indirect[], will keep track of length,
+ * count, and flag
+ */
 public class Inode
 {
     public static final int INODE_SIZE = 32;
@@ -22,14 +28,12 @@ public class Inode
     private static final short NULL_POINTER = -1;
     private static final short UNREGISTERED  = -1;
     private static final short INDIRECT_ERROR  = -2;
-
     
     public int length;  // file size in bytes
     public short count; // # file-table entires pointing to this
     public short flag;  // 0 = unused, 1 = used
     public short direct[] = new short[DIRECT_SIZE];  // direct pointers
     public short indirect;
-
 
     /**
      * Default Inode Constructor.
@@ -72,7 +76,6 @@ public class Inode
         this.indirect = SysLib.bytes2short(block, offset);
     }
 
-
     /**
      * Writes the inode to the disk at the position indicated by the iNumber.
      * @param iNumber - The position on the disk to write the Inode to.
@@ -101,7 +104,6 @@ public class Inode
         SysLib.rawwrite(offset, block);
     }
 
-
     /**
      * Gets the index block number of this Inode.
      * @return - The index block number of this Inode.
@@ -110,8 +112,6 @@ public class Inode
     {
         return this.indirect;
     }
-
-
 
     /**
      * Finds the block at the given offset and returns its block number.
@@ -135,7 +135,6 @@ public class Inode
         SysLib.rawread((int)this.indirect, block);
         return SysLib.bytes2short(block, (blockNumber - DIRECT_SIZE) * 2);
     }
-
 
     /**
      * Sets the data in the block at the given blockNumber to the inode found at
@@ -177,7 +176,7 @@ public class Inode
 
             // block's location in the indirect block
             int blockLocation = (blockPosition - DIRECT_SIZE) * 2;
-            if (SysLib.bytes2short(block, blockLocation) < 0)  // > 0?
+            if (SysLib.bytes2short(block, blockLocation) < 0)
             {
                 return ERROR;
             }
@@ -188,8 +187,6 @@ public class Inode
             return SUCCESS;
         }
     }
-
-
 
     /**
      * Sets this Inode's index block number to the given value, and writes it
@@ -231,53 +228,4 @@ public class Inode
         }
         return null;
     }
-
-
-    /**
-     * A helper method to either set this Inode's data using data read from
-     * existing Inode data on the disk, or to write this Inode's data to the
-     * Inode at the given iNumber on the disk.
-     * @param iNumber The Inode position on the disk to interact with.
-     * @param diskInteraction The type of interaction with the disk. 
-     *                        {@link #READ} if reading, {@link #WRITE} if
-     *                        writing.
-     */
-    private void toFromDisk(int iNumber, int diskInteraction)
-    {
-        byte[] block = new byte[Disk.blockSize];
-        if(diskInteraction == Inode.READ)
-        {
-            this.direct = new short[DIRECT_SIZE];
-            int blockNumber = 1 + iNumber / 16;
-            SysLib.rawread(blockNumber, block);
-        }
-        int offset = iNumber % 16 * INODE_SIZE;
-        this.length = SysLib.bytes2int(block, offset);
-        offset += 4;
-        this.count = SysLib.bytes2short(block, offset);
-        offset += 2;
-        this.flag = SysLib.bytes2short(block, offset);
-        offset += 2;
-        for (int i = 0; i < DIRECT_SIZE; i++)
-        {
-            this.direct[i] = SysLib.bytes2short(block, offset);
-            offset += 2;
-        }
-        this.indirect = SysLib.bytes2short(block, offset);
-        offset += 2;
-        if(diskInteraction == Inode.WRITE)
-        {
-            offset = 1 + iNumber / 16;
-            final byte[] newBlock = new byte[Disk.blockSize];
-            SysLib.rawread(offset, newBlock);
-            System.arraycopy(block, 0, newBlock, iNumber % 16 * INODE_SIZE, 
-                INODE_SIZE);
-            SysLib.rawwrite(offset, newBlock);
-        }
-        
-    }
-
-
-
-
 }

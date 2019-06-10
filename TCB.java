@@ -54,7 +54,7 @@ public class TCB {
 	return terminated;
     }
 
-    // added for the file system
+ 	// Implemented for P5
     public synchronized int getFd( FileTableEntry entry ) {
 	if ( entry == null )
 	    return -1;
@@ -67,7 +67,7 @@ public class TCB {
 	return -1;
     }
 
-    // added for the file system
+    // Implemented for P5
     public synchronized FileTableEntry returnFd( int fd ) {
 	if ( fd >= 3 && fd < 32 ) {
 	    FileTableEntry oldEnt = ftEnt[fd];
@@ -78,7 +78,7 @@ public class TCB {
 	    return null;
     }
 
-    // added for the file systme
+    // Implemented for P5
     public synchronized FileTableEntry getFtEnt( int fd ) {
 	if ( fd >= 3 && fd < 32 )
 	    return ftEnt[fd];

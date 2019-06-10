@@ -167,6 +167,7 @@ public class Kernel
                         return ERROR;
                   }
 
+                  // Implemented for P5
                   myTcb = scheduler.getMyTcb();
                   if ((myTcb != null))
                   {
@@ -193,6 +194,7 @@ public class Kernel
                         return OK;
                   }
 
+                  // Implemented for P5
                   myTcb = scheduler.getMyTcb();
                   if (myTcb != null)
                   {
@@ -215,8 +217,8 @@ public class Kernel
                   cache.flush( );
                   return OK;
 
-
-               case OPEN:    // to be implemented in project
+               // Implemented for P5
+               case OPEN:
                   myTcb = scheduler.getMyTcb();
                   if ((myTcb != null))
                   {
@@ -227,8 +229,8 @@ public class Kernel
                   SysLib.cout("TCB is null in OPEN \n");
                   return ERROR;
 
-
-               case CLOSE:   // to be implemented in project
+               // Implemented for P5
+               case CLOSE:
                   myTcb = scheduler.getMyTcb();
                   if ((myTcb != null))
                   {
@@ -246,8 +248,8 @@ public class Kernel
                   SysLib.cout("TCB is null in CLOSE \n");
                   return ERROR;
 
-
-               case SIZE:    // to be implemented in project
+               // Implemented for P5
+               case SIZE:
                   myTcb = scheduler.getMyTcb();
                   if ((myTcb != null))
                   {
@@ -256,8 +258,8 @@ public class Kernel
                   }
                   return ERROR;
 
-
-               case SEEK:    // to be implemented in project
+               // Implemented for P5
+               case SEEK:
                   myTcb = scheduler.getMyTcb();
                   if ((myTcb != null))
                   {
@@ -267,9 +269,8 @@ public class Kernel
                   }
                   return ERROR;
 
-
-               case FORMAT:  // to be implemented in project
-                  
+               // Implemented for P5
+               case FORMAT:
                   if (filesystem.format(param))
                   {
                      return OK;
@@ -279,8 +280,8 @@ public class Kernel
                      return ERROR;
                   }
                
-               case DELETE:  // to be implemented in project
-
+               // Implemented for P5
+               case DELETE:
                   if (filesystem.delete((String)args))
                   {
                      return OK;

@@ -24,8 +24,6 @@ public class Superblock
     private static final int BLOCK_COUNT_POSITION = 0;
     private static final int INODE_COUNT_POSITION = 4;
     private static final int FREE_LIST_POSITION = 8;
- 
-
 
     /**
      * SuperBlock Constructor. Initializes the SuperBlock using the given
@@ -53,7 +51,6 @@ public class Superblock
         } 
     }
 
-
     /**
      * Writes the data stored in this SuperBlock to the disk.
      */
@@ -65,7 +62,6 @@ public class Superblock
         SysLib.int2bytes(this.freeList, block, FREE_LIST_POSITION);
         SysLib.rawwrite(0, block);
     }
-
 
     /**
      * Gets the next free block.
@@ -79,12 +75,9 @@ public class Superblock
             byte[] newBlock = new byte[Disk.blockSize];
             SysLib.rawread(freeBlock, newBlock);
             this.freeList = SysLib.bytes2int(newBlock, 0);
-            // SysLib.int2bytes(0, newBlock, 0);
-            // SysLib.rawwrite(freeBlock, newBlock);
         }
         return freeBlock;
     }
-
 
     /**
      * Returns the block with the given block number to the free list.
@@ -118,7 +111,6 @@ public class Superblock
     {
         this.format(DEFAULT_INODE_BLOCK_COUNT);
     }
-
 
     /**
      * Format the disk blocks

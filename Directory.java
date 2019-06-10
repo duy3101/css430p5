@@ -7,14 +7,22 @@
 //                     l Test5
 
 
-
+/**
+ * A Directory class manage the name of all files
+ * and allocate/deallocate file in the Directory
+ */
 public class Directory
 {
     private static int maxChars = 30;   // max characters of each filename
+    private int fsizes[];               // each element stores a different file size
+    private char fnames[][];            // each element storess a different file name
 
-    private int fsizes[];    // each element stores a different file size
-    private char fnames[][];    // each element storess a different file name
 
+    /**
+     * A Directory constructor
+     * @param maxInumber the number of totalInodes
+     * @return none
+     */
     public Directory(int maxInumber)
     {
         fsizes = new int[maxInumber];
@@ -28,6 +36,12 @@ public class Directory
         root.getChars(0, fsizes[0], fnames[0], 0);
     }
 
+    /**
+     * assumes data[] recieved directory information from disk
+     * initializes the Directory instance with this data[]
+     * @param data byte[]
+     * @return none
+     */
     public void bytes2directory(byte data[])
     {
         // assumes data[] recieved directory information from disk
@@ -45,39 +59,38 @@ public class Directory
         }
     }
 
+    /**
+     * converts and return Directory information into a plain byte array
+     * this byte array will be written back to Disk
+     * note only meaning directory information should be converted to byte
+     * @return byte[]
+     */
     public byte[] directory2bytes()
     {
-        // converts and return Directory information into a plain byte array
-        // this byte array will be written back to Disk
-        // note only meaning directory information should be converted to byte
-        
         byte[] newBlock = new byte[(fsizes.length * 4 + fnames.length * maxChars * 2) + 1];
         int offset = 0;
         for (int i = 0; i < fsizes.length; i++, offset+=4)
         {
             SysLib.int2bytes(i, newBlock, offset);
         }
-
-
         for (int i = 0; i < fnames.length; i++, offset+= maxChars * 2)
         {
             for (int j = 0; j < fnames[i].length; j++)
             {
                 newBlock[offset + j] = (byte)fnames[i][j];
             }
-
         }
-
         return newBlock;
     }
 
-
+    /**
+     * finds the next open spot on the directory
+     * adds the given filename into the directory
+     * @param filename String
+     * @return -1 if directory is full
+     */
     public short ialloc(String filename)
     {
-        // finds the next open spot on the directory
-        // adds the given filename into the directory
-        // returns -1 if directory is full
-
         for (int i = 1; i < fsizes.length; i++)
         {
             if (fsizes[i] == 0)
@@ -103,9 +116,13 @@ public class Directory
         return (short)-1;
     }
 
+    /**
+     * sets the fsize to 0 to indicate a free directory space
+     * @param iNumber short
+     * @return true if freed
+     */
     public boolean ifree(short iNumber)
     {
-        // sets the fsize to 0 to indicate a free directory space
         if (fsizes[iNumber] > 0)
         {
             fsizes[iNumber] = 0; 
@@ -114,8 +131,12 @@ public class Directory
         return false;
     }
 
-
-
+    /**
+     * finds a file in the directory by checking if the input
+     * is the same length, and then if it has the same characters
+     * @param filename String
+     * @return -1 if the file was not found
+     */
     public short namei(String filename)
     {
         // finds a file in the directory by checking if the input
@@ -138,13 +159,9 @@ public class Directory
                 {
                     continue fnamesloop;
                 }
-
             }
-
             return (short)i;
         }
-
         return (short)-1;
     }
-
 }

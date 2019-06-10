@@ -7,20 +7,33 @@
 //                     l Test5
 
 
-
+/**
+ * The FileSystem that manage Superblock, Directory, and FileTable
+ * there are 8 system calls to use from this class
+ * (format, open, read, write, seek, close, delete and fsize)
+ */
 public class FileSystem
 {
-
+    // mode
     public static final String READ = "r";
     public static final String WRITE = "w";
     public static final String READWRITE = "w+";
     public static final String APPEND = "a";
     public static final String ROOT_NAME = "/";
 
+    // seek 
+    public static final int SEEK_SET = 0;
+    public static final int SEEK_CUR = 1;
+    public static final int SEEK_END = 2;
+
     private Superblock superblock;
     private Directory directory;
     private FileTable filetable;
 
+    /**
+     * A FileSystem constructor
+     * @param int the number of diskBlocks
+     */
     public FileSystem(int diskBlocks)
     {
         // create superblock, and format disk with 64 inodes in default
@@ -44,6 +57,11 @@ public class FileSystem
         close(dirEnt);
     }
 
+    /**
+     * Update directory infomation to the disk
+     * use sync() from Superblock() to sync() superblock
+     * infomation
+     */
     public void sync()
     {
         // open the directory entry and write the directory information
@@ -55,6 +73,11 @@ public class FileSystem
         this.superblock.sync();
     }
 
+    /**
+     * Format the filesystem, reset Superblock, Directory, FileTable
+     * @param file int
+     * @return return True format is sucessful
+     */
     public boolean format(int files)
     {
         // format the disk
@@ -68,6 +91,13 @@ public class FileSystem
         return false;
     }
 
+    /**
+     * Open a file given filename and mode, using falloc to 
+     * search the FileTable
+     * @param filename name of file
+     * @param mode "r", "w", "w+" or "a"
+     * @return return the FileTableEntry of the opened file
+     */
     public FileTableEntry open(String filename, String mode)
     {
         // create a file table entry with the filename and given mode
@@ -89,26 +119,27 @@ public class FileSystem
             {
                 seek(anEntry, 0, SEEK_END);
             }
-            
             // seekPtr to beginning of file for read and readwrite
             else if (mode.equals(READ) || mode.equals(READWRITE))
             {
                 seek(anEntry, 0, SEEK_SET);
             }
-            
             // seekPtr to beginning of file for write and deallocate all blocks
             else
             {
                 seek(anEntry, 0, SEEK_SET);
                 deallocAllBlocks(anEntry);
             }
-        
             return anEntry;
-
-        }
-        
+        } 
     }
     
+    /**
+     * Close a file given FileTableEntry using ffree, keep track
+     * of inode's count
+     * @param ftEnt fileTableEntry
+     * @return return true if close is sucessful
+     */
     public boolean close(FileTableEntry ftEnt)
     {
         // reduces the count of the ftEnt count
@@ -124,6 +155,11 @@ public class FileSystem
         return this.filetable.ffree(ftEnt);
     }
 
+    /**
+     * Return the inode lenth given FileTableEntry
+     * @param ftEnt fileTableEntry
+     * @return return length of inode
+     */
     public int fsizes(FileTableEntry ftEnt)
     {
         // returns the size of the file
@@ -133,13 +169,18 @@ public class FileSystem
         }
     }
 
+    /**
+     * Read a file given FileTableEntry, offset default to the 
+     * start of file
+     * @param ftEnt a fileTableEntry
+     * @param buffer byte[]
+     * @return return number of bytes read
+     */
     public int read(FileTableEntry ftEnt, byte[] buffer)
     {
         // fills the given buffer with the file data from ftEnt
-        
         if (ftEnt.inode.flag == Inode.FLAG_WRITE)
             return -1;
-
         synchronized(ftEnt)
         {
             int seekPosition = ftEnt.seekPtr;  // where seekPtr starts at
@@ -148,7 +189,6 @@ public class FileSystem
             // how much space is left in the block, given the startPosition
             int remainingStartBlock = Disk.blockSize - startPosition;
             byte[] bytes = new byte[Disk.blockSize];
-            
 
             int bytesRead = 0;
             boolean willReadFullFirstBlock = true;
@@ -169,7 +209,6 @@ public class FileSystem
                 ftEnt.seekPtr += remainingStartBlock;
             }
             
-
             // find out how much of the file is left
             int fileLeft = ftEnt.inode.length - (bytesRead + seekPosition);
             if (fileLeft > buffer.length)
@@ -216,10 +255,15 @@ public class FileSystem
         }
     }
 
+    /**
+     * Write a file given FileTableEntry, deallocate block if mode is "w"
+     * @param ftEnt a fileTableEntry
+     * @param buffer byte[]
+     * @return return number of bytes written
+     */
     public int write(FileTableEntry ftEnt, byte[] buffer)
     {
         // writes data from the buffer to the disk
-        
         if (ftEnt.inode.flag == Inode.FLAG_READ)
             return -1;
         
@@ -261,10 +305,8 @@ public class FileSystem
                     ftEnt.inode.length += remainingStartBlock;
                 }
                 
-    
                 // find out how much data is left in the buffer
                 int fileLeft = buffer.length - ftEnt.inode.length;
-   
                 int fullBlocks = fileLeft / Disk.blockSize;
                 int partialBlock = fileLeft % Disk.blockSize;
 
@@ -312,7 +354,6 @@ public class FileSystem
             return bytesWritten;
         }
 
-        
         else  // if mode is APPEND
         {
             byte[] bytes = new byte[Disk.blockSize];
@@ -390,7 +431,6 @@ public class FileSystem
                         ftEnt.inode.length += partialEndBlock;
                         bytesWritten += partialEndBlock;
                         ftEnt.seekPtr += bytesWritten;
-
                     }
                 }
             }
@@ -400,11 +440,14 @@ public class FileSystem
         return bytesWritten;
     }
 
+    /**
+     * Deallocate all blocks associated with the ftEnt
+     * and saves the updated inode to the disk
+     * @param ftEnt a fileTableEntry
+     * @return return true if all deallocated
+     */
     private boolean deallocAllBlocks(FileTableEntry ftEnt)
     {
-        // deallocates all of the blocks in a fileTableEntry's file
-        // and saves the updated inode to the disk
-        
         if (ftEnt == null)
             return false;
 
@@ -428,24 +471,29 @@ public class FileSystem
         ftEnt.inode.toDisk(ftEnt.iNumber);
         
         return true;
-        
     }
 
+    /**
+     * Delete a file from the FileTable
+     * @param filename name of file
+     * @return return true if deleted
+     */
     public boolean delete(String filename)
     {
-        // deletes a file
         FileTableEntry ftEnt = this.open(filename, WRITE);
         return this.close(ftEnt) && this.directory.ifree(ftEnt.iNumber);
     }
 
-    public final int SEEK_SET = 0;
-    public final int SEEK_CUR = 1;
-    public final int SEEK_END = 2;
-
+    /**
+     * moves the seekPtr to beginning, current position, or end
+     * each option can contain an offset
+     * @param ftEnt a FileTableEntry
+     * @param offset offset
+     * @param whence 0, 1 or 2
+     * @return return the updated position
+     */
     public int seek(FileTableEntry ftEnt, int offset, int whence)
     {
-        // moves the seekPtr to beginning, current position, or end
-        // each option can contain an offset
         synchronized(ftEnt)
         {
             int filelength = ftEnt.inode.length;
@@ -499,6 +547,13 @@ public class FileSystem
         }
     }
 
+    /**
+     * Find a block if cannot find it, make a new block 
+     * and register whether to direct[] or indirect
+     * @param block short
+     * @param ftEnt a FileTableEntry
+     * @return return a found or new block
+     */
     public short setBlock(short block, FileTableEntry ftEnt)
     {
         // search for the given block
@@ -523,7 +578,6 @@ public class FileSystem
             ftEnt.inode.registerBlock(ftEnt.seekPtr, freeBlock);
             return freeBlock;
         }
-
         return block;
     }
 }

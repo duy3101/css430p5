@@ -90,16 +90,14 @@ public class SysLib {
 				 Kernel.CSYNC, 0, null );
     }
 
-
-    // P5 sys calls
-    // added for the file system
-
+    // Implemented for P5
     public static int format(int files)
     {
         return Kernel.interrupt( Kernel.INTERRUPT_SOFTWARE,
                 Kernel.FORMAT, files, null);
     }
 
+    // Implemented for P5
     public static int open(String filename, String mode)
     {
         String arg[] = new String[2];
@@ -110,36 +108,42 @@ public class SysLib {
                 Kernel.OPEN, 0, arg);
     }
 
+    // Implemented for P5
     public static int read(int fd, byte buffer[])
     {
         return Kernel.interrupt( Kernel.INTERRUPT_SOFTWARE,
                 Kernel.READ, fd, buffer);
     }
 
+    // Implemented for P5
     public static int write(int fd, byte buffer[])
     {
         return Kernel.interrupt( Kernel.INTERRUPT_SOFTWARE,
                 Kernel.WRITE, fd, buffer);
     }
 
+    // Implemented for P5
     public static int close(int file)
     {
         return Kernel.interrupt( Kernel.INTERRUPT_SOFTWARE,
                 Kernel.CLOSE, file, null);
     }
 
+    // Implemented for P5
     public static int delete(String filename)
     {
         return Kernel.interrupt( Kernel.INTERRUPT_SOFTWARE,
 				 Kernel.DELETE, 0, filename);
     }
 
+    // Implemented for P5
     public static int fsize(int file)
     {
         return Kernel.interrupt( Kernel.INTERRUPT_SOFTWARE,
 				 Kernel.SIZE, file, null);
     }
 
+    // Implemented for P5
     public static int seek(int file, int offset, int whence)
     {
         int arg[] = new int[3];
