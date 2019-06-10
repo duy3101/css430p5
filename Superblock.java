@@ -14,7 +14,6 @@
  * {@link #getFreeBlock() getFreeBlock} and 
  * {@link #returnBlock(int) returnBlock}.
  */
-
 public class Superblock
 {
     public int totalBlocks; // the number of disk blocks
@@ -110,13 +109,22 @@ public class Superblock
         return false;
     }
 
-
+    /**
+     * Format the disk blocks
+     * @param totalInodes - To number of inode blocks
+     * @return void
+     */
     public void format()
     {
         this.format(DEFAULT_INODE_BLOCK_COUNT);
     }
 
 
+    /**
+     * Format the disk blocks
+     * @param totalInodes - To number of inode blocks
+     * @return void
+     */
     public void format(int totalInodes)
     {
         for(int i = 0; i < totalInodes; i++)

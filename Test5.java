@@ -32,8 +32,8 @@ class Test5 extends Thread {
       SysLib.cout("Correct behavior of appending a few bytes.......1\n");
     if ( test7( ) ) // seek and read from "css430"
       SysLib.cout("Correct behavior of seeking in a small file.....1\n");
-    // if ( test8( ) ) // open "css430" with "w+"
-    //   SysLib.cout("Correct behavior of read/writing a small file.0.5\n");
+    if ( test8( ) ) // open "css430" with "w+"
+      SysLib.cout("Correct behavior of read/writing a small file.0.5\n");
 
     test9( );        // open "bothell" with "w+"
     if ( test10( ) ) // write buf[512 * 13]
@@ -237,60 +237,42 @@ class Test5 extends Thread {
   }
 
   private boolean test8( ) {
-    //.............................................."
-    SysLib.cout( "8: open \"css430\" with w+.........." );
+     //.............................................."
+     SysLib.cout( "8: open \"css430\" with w+.........." );
 
-    for ( short i = 0; i < 24; i++ )
-      buf24[i] = ( byte )( 24 - i );
-
-
-    fd = SysLib.open( "css430", "w+" );
-    
-    byte[] tmpBuf2 = new byte[48];
-    SysLib.read( fd, tmpBuf2 );
-
-    for ( byte i = 0; i < 48; i++ )
-    {
-      System.out.println("tempBuf2[" + i + "]= " + tmpBuf2[i]);
-    }
-    
-    // SysLib.seek( fd, 24, 0 );
-    // SysLib.write( fd, buf24 );
-  
-    // SysLib.seek( fd, 0, 0 );
-    // byte[] tmpBuf = new byte[48];
-    // SysLib.read( fd, tmpBuf );
-
-    // for ( byte i = 0; i < 48; i++ )
-    // {
-    //   System.out.println("tempBuf[" + i + "]= " + tmpBuf[i]);
-    // }
-
-    // for ( byte i = 0; i < 16; i++ )
-    //   if ( tmpBuf[i] != buf16[i] ) {
-    //     SysLib.cout("CHECK1\n");
-    //     SysLib.cout( "tmpBuf[" + i + "]=" + tmpBuf[i] + " (wrong)\n" );
-    //     SysLib.close( fd );
-    //     return false;
-    //   }
-    // for ( byte i = 16; i < 24; i++ )
-    //   if ( tmpBuf[i] != buf32[i-16] ) {
-    //     SysLib.cout("CHECK2\n");
-    //     SysLib.cout( "tmpBuf[" + i + "]=" + tmpBuf[i] + " (wrong)\n" );
-    //     SysLib.close( fd );
-    //     return false;
-    //   }
-    // for ( byte i = 24; i < 48; i++ )
-    //   if ( tmpBuf[i] != buf24[i-24] ) {
-    //     SysLib.cout("CHECK3\n");
-    //     SysLib.cout( "tmpBuf[" + i + "]=" + tmpBuf[i] + " (wrong)\n" );
-    //     SysLib.close( fd );
-    //     return false;
-    //   }
-
-    //   SysLib.close( fd );
-    //   SysLib.cout( "SUCCESSFULLY COMPLETED\n" );
-      return true;
+     for ( short i = 0; i < 24; i++ )
+       buf24[i] = ( byte )( 24 - i );
+ 
+     fd = SysLib.open( "css430", "w+" );
+     SysLib.seek( fd, 24, 0 );
+     SysLib.write( fd, buf24 );
+   
+     SysLib.seek( fd, 0, 0 );
+     byte[] tmpBuf = new byte[48];
+     SysLib.read( fd, tmpBuf );
+ 
+     for ( byte i = 0; i < 16; i++ )
+       if ( tmpBuf[i] != buf16[i] ) {
+         SysLib.cout( "tmpBuf[" + i + "]=" + tmpBuf[i] + " (wrong)\n" );
+         SysLib.close( fd );
+         return false;
+       }
+     for ( byte i = 16; i < 24; i++ )
+       if ( tmpBuf[i] != buf32[i-16] ) {
+         SysLib.cout( "tmpBuf[" + i + "]=" + tmpBuf[i] + " (wrong)\n" );
+         SysLib.close( fd );
+         return false;
+       }
+     for ( byte i = 24; i < 48; i++ )
+       if ( tmpBuf[i] != buf24[i-24] ) {
+         SysLib.cout( "tmpBuf[" + i + "]=" + tmpBuf[i] + " (wrong)\n" );
+         SysLib.close( fd );
+         return false;
+       }
+ 
+       SysLib.close( fd );
+       SysLib.cout( "successfully completed\n" );
+       return true;
   }
   
   //final byte[] buf8192 = new byte[8192];
@@ -399,20 +381,6 @@ class Test5 extends Thread {
   private boolean test14( ) {
     //.............................................."
     SysLib.cout( "14: seek and read from \"bothell\"..." );
-
-    // fd = SysLib.open( "bothell", "r" );
-
-    // byte[] tmpBuf = new byte[6656];
-    // size = SysLib.read( fd, tmpBuf );
-
-    // for ( int i = 0; i < 6656; i++ ) {
-    //   if ( tmpBuf[i] != buf6656[i] ) {
-    //     SysLib.cout( "buf[" + i + "] = " + tmpBuf[i] + " buf6656 = " +
-    //        buf6656[i] + "\n" );
-    //     SysLib.close( fd );
-    //     return false;
-    //   }
-    // }
     
     fd = SysLib.open( "bothell", "r" );
     int position = SysLib.seek( fd, 512 * 11, 0 );

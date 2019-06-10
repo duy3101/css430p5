@@ -61,9 +61,7 @@ public class TCB {
 	for ( int i = 3; i < 32; i++ ) {
 	    if ( ftEnt[i] == null ) {
 		ftEnt[i] = entry;
-		System.out.println("getFd return: " + i);
 		return i;
-
 	    }
 	}
 	return -1;

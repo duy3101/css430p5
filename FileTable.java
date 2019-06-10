@@ -6,8 +6,8 @@
 //                     java Boot
 //                     l Test5
 
-import java.util.Vector;
 
+import java.util.Vector;
 import javax.lang.model.util.ElementScanner6;
 
 public class FileTable
@@ -44,7 +44,6 @@ public class FileTable
             
             if (iNumber < 0)  // if filename is not an inode yet
             {
-                SysLib.cout("GOT ALLOCATED");
                 iNumber = dir.ialloc(filename);
             }
 
@@ -140,10 +139,6 @@ public class FileTable
         table.addElement(anEntry);
         return anEntry;   
     }
-
-
-
-
 
     public synchronized boolean ffree(FileTableEntry anEntry)
     {

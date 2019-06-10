@@ -6,8 +6,6 @@
 //                     java Boot
 //                     l Test5
 
-
-
 public class Inode
 {
     public static final int INODE_SIZE = 32;
@@ -135,8 +133,6 @@ public class Inode
 
         byte[] block = new byte[Disk.blockSize];
         SysLib.rawread((int)this.indirect, block);
-        System.out.println("Confusion... "
-        + SysLib.bytes2short(block, (blockNumber - DIRECT_SIZE) * 2));
         return SysLib.bytes2short(block, (blockNumber - DIRECT_SIZE) * 2);
     }
 
@@ -166,7 +162,6 @@ public class Inode
             }
 
             this.direct[blockPosition] = blockNumber;
-            System.out.println("direct " + this.direct[blockPosition]);
             return SUCCESS;
         }
         // if all direct slots are full, register a block to an indirect slot
@@ -189,9 +184,6 @@ public class Inode
 
             SysLib.short2bytes(blockNumber, block, blockLocation);
             SysLib.rawwrite((int)this.indirect, block);
-            
-            //System.out.println("direct" + this.direct[blockPosition]);
-            System.out.println("indirect" + this.indirect);
 
             return SUCCESS;
         }
@@ -269,7 +261,6 @@ public class Inode
         for (int i = 0; i < DIRECT_SIZE; i++)
         {
             this.direct[i] = SysLib.bytes2short(block, offset);
-            //System.out.println("Direct stuff: " + this.direct[i]);
             offset += 2;
         }
         this.indirect = SysLib.bytes2short(block, offset);

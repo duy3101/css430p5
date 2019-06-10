@@ -44,7 +44,6 @@ public class FileSystem
         close(dirEnt);
     }
 
-
     public void sync()
     {
         // open the directory entry and write the directory information
@@ -71,9 +70,9 @@ public class FileSystem
 
     public FileTableEntry open(String filename, String mode)
     {
-       // create a file table entry with the filename and given mode
+        // create a file table entry with the filename and given mode
         FileTableEntry anEntry = filetable.falloc(filename, mode);
-        SysLib.cout("ftEnt.iNumber: " + anEntry.iNumber);
+
         // anEntry will be null if filename is not in there
         
         // if trying to read a file that doesn't exist, don't create a file
@@ -206,8 +205,6 @@ public class FileSystem
                 block = ftEnt.inode.findTargetBlock(ftEnt.seekPtr);
                 SysLib.rawread(block, bytes);
 
-                System.out.println(" partialblocks = " + partialBlock);
-                System.out.println(" bytesread = " + bytesRead);
                 System.arraycopy(bytes, 0, buffer, bytesRead, partialBlock);
 
                 ftEnt.seekPtr += Disk.blockSize;
@@ -227,11 +224,6 @@ public class FileSystem
             return -1;
         
         int bytesWritten = 0;
-
-        // if (ftEnt.mode == WRITE || ftEnt.mode == READWRITE)
-        // {
-        //     deallocAllBlocks(ftEnt);
-        // }
 
         if (ftEnt.mode != APPEND)  // if mode is WRITE or READWRITE
         {
@@ -253,7 +245,7 @@ public class FileSystem
                 }
                 
                 short block = -1;
-                System.out.println("setBlock outside calling");
+
                 block = setBlock(block, ftEnt);
                 
                 if (block != (short)-1)
@@ -319,13 +311,14 @@ public class FileSystem
             ftEnt.inode.toDisk(ftEnt.iNumber);
             return bytesWritten;
         }
+
+        
         else  // if mode is APPEND
         {
             byte[] bytes = new byte[Disk.blockSize];
             
             // how much original file spilled into its last block
             int startBlockOffset = ftEnt.inode.length % Disk.blockSize;
-            System.out.println("ftEnt.inode.length: " + ftEnt.inode.length);
             
             // how much space original file's last block still has
             int remainingStartBlock = Disk.blockSize - startBlockOffset;
@@ -359,8 +352,7 @@ public class FileSystem
                     // the length of what is being copied is however much free space is left in the block
                     // UNLESS buffer is less than that remaining block space, in which case just copy all of buffer.
                     System.arraycopy(buffer, 0, bytes, startBlockOffset, remainingStartBlock);
-                    System.out.println("RemainStartBlock: " + remainingStartBlock);
-                    System.out.println("SBOFfset:" + startBlockOffset);
+
                     SysLib.rawwrite(block, bytes);
 
                     ftEnt.inode.length += remainingStartBlock;
@@ -445,10 +437,6 @@ public class FileSystem
         FileTableEntry ftEnt = this.open(filename, WRITE);
         return this.close(ftEnt) && this.directory.ifree(ftEnt.iNumber);
     }
-
-
-
-
 
     public final int SEEK_SET = 0;
     public final int SEEK_CUR = 1;
